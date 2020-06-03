@@ -37,8 +37,7 @@ function PointSample(t::Vector{Tv}) where Tv
     WeightedSample(length(dt), maxt, dt, ones(length(dt)))
 end
 
-function WeightedSample(f::Any, bounds::Tuple{Tv,Tv}) where Tv
-    de = deint(f, bounds[1], bounds[2])
+function WeightedSample(f::Any, bounds::Tuple{Tv,Tv}; reltol::Tv = 1.0e-8, abstol::Tv = eps(Tv), d = 8, maxiter = 16) where Tv
+    de = deint(f, bounds[1], bounds[2], reltol=reltol, abstol=abstol, d=d, maxiter=maxiter)
     WeightedSample(de.x, de.w * de.h)
 end
-

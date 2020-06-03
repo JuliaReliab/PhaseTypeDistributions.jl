@@ -1,5 +1,6 @@
 export phfit!, phfit
 
+# TODO: interface should be changed so that we can control deformula aprameters
 function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::Type{MatT} = SparseCSC;
     initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), verbose = [false, false],
     steps = 50,

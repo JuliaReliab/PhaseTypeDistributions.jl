@@ -3,6 +3,7 @@ using SparseMatrix
 using NMarkov
 using Test
 using Distributions
+using LinearAlgebra
 
 @testset "Test of CF1" begin
     alpha = [0.1, 0.3, 0.6]
@@ -165,8 +166,7 @@ end
     dat = WeightedSample((0.0, Inf64)) do x
         pdf(Weibull(2.0, 1.0), x)
     end
-    cf1 = initializePH(CF1(100), dat, verbose = true)
-    # println(cf1)
+    cf1 = initializePH(CF1(10), dat, verbose = true)
     @test true
 end
 
@@ -174,7 +174,7 @@ end
     dat = WeightedSample((0.0, Inf64)) do x
         pdf(Weibull(2.0, 1.0), x)
     end
-    cf1 = initializePH(CF1(50), dat, verbose = true)
+    cf1 = initializePH(CF1(10), dat, verbose = true)
     phfit!(cf1, dat, verbose = true)
     # println(cf1)
     @test true
@@ -209,4 +209,152 @@ end
         println("$(i) $(x[i]) $(y[i])")
         @test x[i] - y[i] < 1.0e-4
     end
+end
+
+@testset "Test of phfit 1" begin
+    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+        pdf(Weibull(2.0, 1.0), x)
+    end
+    data = WeightedSample((0.0, Inf64)) do x
+        pdf(Weibull(2.0, 1.0), x)
+    end
+    llf = phllf(cf1, data)
+    @test abs((llf0 - llf) / llf) < 1.0e-6
+end
+
+@testset "Test of phfit 2" begin
+    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+        pdf(Weibull(2.0, 1.0), x)
+    end
+    data = WeightedSample((0.0, Inf64)) do x
+        pdf(Weibull(2.0, 1.0), x)
+    end
+    println(cf1)
+
+    deriv = Dict{Symbol,CF1{Float64}}()
+    for i = 1:cf1.dim
+        s = Symbol(:rate, i)
+        a = zeros(Float64, cf1.dim)
+        x = zeros(Float64, cf1.dim)
+        x[i] = 1.0
+        deriv[s] = CF1(cf1.dim, a, x)
+        if i != cf1.dim
+            s = Symbol(:alpha, i)
+            a = zeros(Float64, cf1.dim)
+            x = zeros(Float64, cf1.dim)
+            a[i] = 1.0
+            a[cf1.dim] = -1.0
+            deriv[s] = CF1(cf1.dim, a, x)
+        end
+    end
+    llf, llfdash = phllf(cf1, deriv, data)
+    println(llfdash)
+
+    llfdash0 = Dict()
+    for i = 1:cf1.dim
+        h = 0.000001
+        cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+        cf1tmp.rate[i] -= h
+        llf1 = phllf(cf1tmp, data)
+        cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+        cf1tmp.rate[i] += h
+        llf2 = phllf(cf1tmp, data)
+        s = Symbol(:rate, i)
+        llfdash0[s] = (llf2 - llf1) / (2*h)
+
+        if i != cf1.dim
+            h = 0.00000001
+            cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1tmp.alpha[i] -= h
+            cf1tmp.alpha[cf1.dim] += h
+            llf1 = phllf(cf1tmp, data)
+            cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1tmp.alpha[i] += h
+            cf1tmp.alpha[cf1.dim] -= h
+            llf2 = phllf(cf1tmp, data)
+            s = Symbol(:alpha, i)
+            llfdash0[s] = (llf2 - llf1) / (2*h)
+        end
+    end
+
+    @test llf ≈ phllf(cf1, data)
+    for i = eachindex(llfdash0)
+        rerror = abs((llfdash[i] - llfdash0[i])/llfdash0[i])
+        println((i, llfdash[i], llfdash0[i], rerror))
+        @test rerror < 1.0e-1
+    end
+end
+
+@testset "Test of phfit 3" begin
+    cf1, llf0, = phfit(CF1(5), verbose=[true, true]) do x
+        pdf(Weibull(2.0, 1.0), x)
+    end
+    data = WeightedSample((0.0, Inf64)) do x
+        pdf(Weibull(2.0, 1.0), x)
+    end
+    println(cf1)
+
+    deriv = Dict{Symbol,CF1{Float64}}()
+    deriv2 = Dict{Tuple{Symbol,Symbol},CF1{Float64}}()
+    for i = 1:cf1.dim-1
+        s = Symbol(:alpha, i)
+        a = zeros(Float64, cf1.dim)
+        x = zeros(Float64, cf1.dim)
+        a[i] = 1.0
+        a[cf1.dim] = -1.0
+        deriv[s] = CF1(cf1.dim, a, x)
+        for j = i:cf1.dim-1
+            s2 = Symbol(:alpha, j)
+            a = zeros(Float64, cf1.dim)
+            x = zeros(Float64, cf1.dim)
+            deriv2[(s,s2)] = CF1(cf1.dim, a, x)
+        end
+        for j = 1:cf1.dim
+            s2 = Symbol(:rate, j)
+            a = zeros(Float64, cf1.dim)
+            x = zeros(Float64, cf1.dim)
+            deriv2[(s,s2)] = CF1(cf1.dim, a, x)
+        end
+    end
+    for i = 1:cf1.dim
+        s = Symbol(:rate, i)
+        a = zeros(Float64, cf1.dim)
+        x = zeros(Float64, cf1.dim)
+        x[i] = 1.0
+        deriv[s] = CF1(cf1.dim, a, x)
+        for j = i:cf1.dim
+            s2 = Symbol(:rate, j)
+            a = zeros(Float64, cf1.dim)
+            x = zeros(Float64, cf1.dim)
+            deriv2[(s,s2)] = CF1(cf1.dim, a, x)
+        end
+    end
+    llf, llfdash, llfdashdash = phllf(cf1, deriv, deriv2, data)
+    llf0, llfdash0 = phllf(cf1, deriv, data)
+    @test llf ≈ llf0
+    for i = eachindex(llfdash0)
+        @test llfdash0[i] ≈ llfdash[i]
+    end
+
+    k = 1
+    index = Dict()
+    for i = 1:cf1.dim-1
+        s = Symbol(:alpha, i)
+        index[s] = k
+        k += 1
+    end
+    for i = 1:cf1.dim
+        s = Symbol(:rate, i)
+        index[s] = k
+        k += 1
+    end
+    IM = zeros(length(index), length(index))
+    for i = eachindex(llfdashdash)
+        IM[index[i[1]], index[i[2]]] = llfdashdash[i]
+        IM[index[i[2]], index[i[1]]] = llfdashdash[i]
+    end
+    values,vectors = eigen(-IM)
+    println(values)
+    @test all(values .> 0)
+    println(inv(-IM))
 end

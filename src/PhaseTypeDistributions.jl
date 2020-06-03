@@ -15,4 +15,6 @@ include("_emstep.jl")
 include("_cf1init.jl")
 include("_phfit.jl")
 
+include("_phllf.jl")
+
 end # module

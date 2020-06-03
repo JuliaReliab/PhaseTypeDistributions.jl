@@ -11,21 +11,25 @@ function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = Spars
     eres = Estep(GPH(cf1, MatT))
     for fn = [_cf1_params_power, _cf1_params_linear]
         for x = scales, s = shapes
-            newcf1 = fn(cf1.dim, m*x, s)
-            local llf::Tv
-            for k = 1:maxiter
-                llf = estep!(newcf1, data, eres, eps=eps, ufact=ufact)
-                mstep!(newcf1, eres)
-            end
-            if !isfinite(llf)
-                verbose && print("-")
-            else
-                if maxllf < llf
-                    maxllf, maxph = llf, newcf1
-                    verbose && print("o")
-                else
-                    verbose && print("x")
+            try
+                newcf1 = fn(cf1.dim, m*x, s)
+                local llf::Tv
+                for k = 1:maxiter
+                    llf = estep!(newcf1, data, eres, eps=eps, ufact=ufact)
+                    mstep!(newcf1, eres)
                 end
+                if !isfinite(llf)
+                    verbose && print("-")
+                else
+                    if maxllf < llf
+                        maxllf, maxph = llf, newcf1
+                        verbose && print("o")
+                    else
+                        verbose && print("x")
+                    end
+                end
+            catch
+                verbose && print("-")
             end
         end
         verbose && println()
