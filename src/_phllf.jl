@@ -147,7 +147,7 @@ Uniformization
     nothing
 end
 
-@origin (prob => left) function unifforward!(
+@origin prob => left function unifforward!(
     f0::Vector{Tv}, f0dash::Dict{Symbol,Vector{Tv}}, t::Tv,
     P::AbstractMatrix{Tv}, Pdash::Dict{Symbol,<:AbstractMatrix{Tv}}, qv::Tv,
     prob::Vector{Tv}, eps::Tv,

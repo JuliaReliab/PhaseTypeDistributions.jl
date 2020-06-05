@@ -224,64 +224,57 @@ end
 
 @testset "Test of phfit 2" begin
     cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
-        pdf(Weibull(2.0, 1.0), x)
+        pdf(Weibull(1.5, 1.0), x)
     end
     data = WeightedSample((0.0, Inf64)) do x
-        pdf(Weibull(2.0, 1.0), x)
+        pdf(Weibull(1.5, 1.0), x)
     end
     println(cf1)
 
     deriv = Dict{Symbol,CF1{Float64}}()
     for i = 1:cf1.dim
         s = Symbol(:rate, i)
-        a = zeros(Float64, cf1.dim)
-        x = zeros(Float64, cf1.dim)
+        a = zero(cf1.alpha)
+        x = zero(cf1.rate)
         x[i] = 1.0
         deriv[s] = CF1(cf1.dim, a, x)
-        if i != cf1.dim
-            s = Symbol(:alpha, i)
-            a = zeros(Float64, cf1.dim)
-            x = zeros(Float64, cf1.dim)
-            a[i] = 1.0
-            a[cf1.dim] = -1.0
-            deriv[s] = CF1(cf1.dim, a, x)
-        end
+
+        s = Symbol(:alpha, i)
+        a = zero(cf1.alpha)
+        x = zero(cf1.rate)
+        a[i] = 1.0
+        deriv[s] = CF1(cf1.dim, a, x)
     end
     llf, llfdash = phllf(cf1, deriv, data)
     println(llfdash)
 
-    llfdash0 = Dict()
+    h = 0.000001
+    tol = 1e-6
     for i = 1:cf1.dim
-        h = 0.000001
-        cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
-        cf1tmp.rate[i] -= h
-        llf1 = phllf(cf1tmp, data)
-        cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
-        cf1tmp.rate[i] += h
-        llf2 = phllf(cf1tmp, data)
-        s = Symbol(:rate, i)
-        llfdash0[s] = (llf2 - llf1) / (2*h)
-
-        if i != cf1.dim
-            h = 0.00000001
-            cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
-            cf1tmp.alpha[i] -= h
-            cf1tmp.alpha[cf1.dim] += h
-            llf1 = phllf(cf1tmp, data)
-            cf1tmp = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
-            cf1tmp.alpha[i] += h
-            cf1tmp.alpha[cf1.dim] -= h
-            llf2 = phllf(cf1tmp, data)
-            s = Symbol(:alpha, i)
-            llfdash0[s] = (llf2 - llf1) / (2*h)
-        end
+        s = Symbol(:alpha, i)
+        cf1h1 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+        cf1h2 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+        cf1h1.alpha[i] -= h
+        cf1h2.alpha[i] += h
+        llf1 = phllf(cf1h1, data)
+        llf2 = phllf(cf1h2, data)
+        tmp = 1.0 + abs((llf2 - llf1)) / (2*h)
+        error = abs((abs(llfdash[s]) + 1.0 - tmp) / (1.0 + abs(llfdash[s])))
+        println((s, abs((llf2 - llf1)) / (2*h), abs(llfdash[s])))
+        @test error < tol
     end
-
-    @test llf ≈ phllf(cf1, data)
-    for i = eachindex(llfdash0)
-        rerror = abs((llfdash[i] - llfdash0[i])/llfdash0[i])
-        println((i, llfdash[i], llfdash0[i], rerror))
-        @test rerror < 1.0e-1
+    for i = 1:cf1.dim
+        s = Symbol(:rate, i)
+        cf1h1 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+        cf1h2 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+        cf1h1.rate[i] -= h
+        cf1h2.rate[i] += h
+        llf1 = phllf(cf1h1, data)
+        llf2 = phllf(cf1h2, data)
+        tmp = 1.0 + abs((llf2 - llf1)) / (2*h)
+        error = abs((abs(llfdash[s]) + 1.0 - tmp) / (1.0 + abs(llfdash[s])))
+        println((s, abs((llf2 - llf1)) / (2*h), abs(llfdash[s])))
+        @test error < tol
     end
 end
 
@@ -357,4 +350,191 @@ end
     println(values)
     @test all(values .> 0)
     println(inv(-IM))
+end
+
+@testset "Test of phfit 4" begin
+    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+        pdf(Weibull(1.5, 1.0), x)
+    end
+    data = WeightedSample((0.0, Inf64)) do x
+        pdf(Weibull(1.5, 1.0), x)
+    end
+    println(cf1)
+
+    deriv = Dict{Symbol,CF1{Float64}}() ## １階微分
+    for i = 1:cf1.dim
+        s = Symbol(:alpha, i)
+        a = zero(cf1.alpha)
+        x = zero(cf1.rate)
+        a[i] = 1.0
+        deriv[s] = CF1{Float64}(cf1.dim, a, x)
+    end
+    for i = 1:cf1.dim
+        s = Symbol(:rate, i)
+        a = zero(cf1.alpha)
+        x = zero(cf1.rate)
+        x[i] = 1.0
+        deriv[s] = CF1{Float64}(cf1.dim, a, x)
+    end
+    deriv2 = Dict{Tuple{Symbol,Symbol},CF1{Float64}}() ## 2階微分
+    for i = 1:cf1.dim
+        s1 = Symbol(:alpha, i)
+        for j = i:cf1.dim
+            s2 = Symbol(:alpha, j)
+            a = zero(cf1.alpha)
+            x = zero(cf1.rate)
+            deriv2[(s1,s2)] = CF1{Float64}(cf1.dim, a, x)
+        end
+        for j = 1:cf1.dim
+            s2 = Symbol(:rate, j)
+            a = zero(cf1.alpha)
+            x = zero(cf1.rate)
+            deriv2[(s1,s2)] = CF1{Float64}(cf1.dim, a, x)
+        end
+    end
+    for i = 1:cf1.dim
+        s1 = Symbol(:rate, i)
+        for j = i:cf1.dim
+            s2 = Symbol(:rate, j)
+            a = zero(cf1.alpha)
+            x = zero(cf1.rate)
+            deriv2[(s1,s2)] = CF1{Float64}(cf1.dim, a, x)
+        end
+    end
+    
+    delta = 0.00001
+    tol = 1e-5
+    llf, llfdash, llfdashdash = phllf(cf1, deriv, deriv2, data)
+    for i = 1:cf1.dim
+        for j = i:cf1.dim
+            s1 = Symbol(:alpha, i)
+            s2 = Symbol(:alpha, j)
+            cf1h1 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h2 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h3 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h4 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h1.alpha[i] -= delta
+            cf1h2.alpha[i] -= delta
+            cf1h1.alpha[j] -= delta
+            cf1h2.alpha[j] += delta
+            cf1h3.alpha[i] += delta
+            cf1h4.alpha[i] += delta
+            cf1h3.alpha[j] -= delta
+            cf1h4.alpha[j] += delta
+            lf1 = phllf(cf1h1, data)
+            lf2 = phllf(cf1h2, data)
+            lf3 = phllf(cf1h3, data)
+            lf4 = phllf(cf1h4, data)
+            tmp = abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2) + 1.0
+            error = (abs(llfdashdash[s1,s2]) + 1.0 - tmp) / (abs(llfdashdash[s1,s2]) + 1.0)
+            println((s1, s2, abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2), abs(llfdashdash[s1,s2])))
+            if i < cf1.dim && j < cf1.dim
+                @test abs(error) < tol
+            end
+        end
+        for j = 1:cf1.dim
+            s1 = Symbol(:alpha, i)
+            s2 = Symbol(:rate, j)
+            cf1h1 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h2 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h3 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h4 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h1.alpha[i] -= delta
+            cf1h2.alpha[i] -= delta
+            cf1h1.rate[j] -= delta
+            cf1h2.rate[j] += delta
+            cf1h3.alpha[i] += delta
+            cf1h4.alpha[i] += delta
+            cf1h3.rate[j] -= delta
+            cf1h4.rate[j] += delta
+            lf1 = phllf(cf1h1, data)
+            lf2 = phllf(cf1h2, data)
+            lf3 = phllf(cf1h3, data)
+            lf4 = phllf(cf1h4, data)
+            tmp = abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2) + 1.0
+            error = (abs(llfdashdash[s1,s2]) + 1.0 - tmp) / (abs(llfdashdash[s1,s2]) + 1.0)
+            println((s1, s2, abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2), abs(llfdashdash[s1,s2])))
+            @test abs(error) < tol
+        end
+    end
+    for i = 1:cf1.dim
+        for j = i:cf1.dim
+            s1 = Symbol(:rate, i)
+            s2 = Symbol(:rate, j)
+            cf1h1 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h2 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h3 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h4 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+            cf1h1.rate[i] -= delta
+            cf1h2.rate[i] -= delta
+            cf1h1.rate[j] -= delta
+            cf1h2.rate[j] += delta
+            cf1h3.rate[i] += delta
+            cf1h4.rate[i] += delta
+            cf1h3.rate[j] -= delta
+            cf1h4.rate[j] += delta
+            lf1 = phllf(cf1h1, data)
+            lf2 = phllf(cf1h2, data)
+            lf3 = phllf(cf1h3, data)
+            lf4 = phllf(cf1h4, data)
+            tmp = abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2) + 1.0
+            error = (abs(llfdashdash[s1,s2]) + 1.0 - tmp) / (abs(llfdashdash[s1,s2]) + 1.0)
+            println((s1, s2, abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2), abs(llfdashdash[s1,s2])))
+            @test abs(error) < tol
+        end
+    end
+end
+
+@testset "Test of phfit 5" begin
+    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+        pdf(Weibull(1.5, 1.0), x)
+    end
+    data = WeightedSample((0.0, Inf64)) do x
+        pdf(Weibull(1.5, 1.0), x)
+    end
+    println(cf1)
+
+    deriv = Dict{Symbol,CF1{Float64}}() ## １階微分
+    i = cf1.dim
+    s = Symbol(:alpha, i)
+    a = zero(cf1.alpha)
+    x = zero(cf1.rate)
+    a[i] = 1.0
+    deriv[s] = CF1{Float64}(cf1.dim, a, x)
+    deriv2 = Dict{Tuple{Symbol,Symbol},CF1{Float64}}() ## 2階微分
+    i = cf1.dim
+    j = cf1.dim
+    s1 = Symbol(:alpha, i)
+    s2 = Symbol(:alpha, j)
+    a = zero(cf1.alpha)
+    x = zero(cf1.rate)
+    deriv2[(s1,s2)] = CF1{Float64}(cf1.dim, a, x)
+    llf, llfdash, llfdashdash = phllf(cf1, deriv, deriv2, data)
+
+    delta = 0.000001
+    tol = 1e-5
+    i = cf1.dim
+    j = cf1.dim
+    s1 = Symbol(:alpha, i)
+    s2 = Symbol(:alpha, j)
+    cf1h1 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+    cf1h2 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+    cf1h3 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+    cf1h4 = CF1(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
+    cf1h1.alpha[i] -= delta
+    cf1h2.alpha[i] -= delta
+    cf1h1.alpha[j] -= delta
+    cf1h2.alpha[j] += delta
+    cf1h3.alpha[i] += delta
+    cf1h4.alpha[i] += delta
+    cf1h3.alpha[j] -= delta
+    cf1h4.alpha[j] += delta
+    lf1 = phllf(cf1h1, data)
+    lf2 = phllf(cf1h2, data)
+    lf3 = phllf(cf1h3, data)
+    lf4 = phllf(cf1h4, data)
+    tmp = abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2) + 1.0
+    error = (abs(llfdashdash[s1,s2]) + 1.0 - tmp) / (abs(llfdashdash[s1,s2]) + 1.0)
+    println((s1, s2, abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2), abs(llfdashdash[s1,s2])))
+    @test abs(error) < tol
 end
