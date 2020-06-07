@@ -193,7 +193,7 @@ function mstep!(ph::GPH{Tv,SparseCOO{Tv,Ti}}, eres::Estep{Tv,SparseCOO{Tv,Ti}}) 
     nothing
 end
 
-function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}) where {Tv,MatT}
+function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}; cf1sort = true) where {Tv,MatT}
     dim = cf1.dim
     total = Tv(0)
     for i = 1:dim
@@ -201,6 +201,6 @@ function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}) where {Tv,MatT}
         cf1.alpha[i] = eres.eb[i] / eres.etotal
         cf1.rate[i] = total / eres.ez[i]
     end
-    _cf1_sort!(cf1.alpha, cf1.rate)
+    cf1sort && _cf1_sort!(cf1.alpha, cf1.rate)
     nothing
 end
