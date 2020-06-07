@@ -2,6 +2,8 @@
 Phase-Type Distributions
 """
 
+import Base
+
 export CF1, GPH
 
 abstract type AbstractPHDistribution end
@@ -11,6 +13,10 @@ struct GPH{Tv,MatT} <: AbstractPHDistribution
     alpha::Vector{Tv}
     T::MatT
     tau::Vector{Tv}
+end
+
+function Base.copy(gph::GPH{Tv,MatT}) where {Tv,MatT}
+    GPH{Tv,MatT}(gph.dim, copy(gph.alpha), copy(gph.T), copy(gph.tau))
 end
 
 struct CF1{Tv} <: AbstractPHDistribution
@@ -28,6 +34,10 @@ function CF1(alpha::Vector{Tv}, rate::Vector{Tv}) where Tv
     n = length(alpha)
     alpha, rate = _cf1_sort(alpha, rate)
     CF1(n, alpha, rate)
+end
+
+function Base.copy(cf1::CF1{Tv}) where {Tv}
+    CF1{Tv}(cf1.dim, copy(cf1.alpha), copy(cf1.rate))
 end
 
 function _togph(cf1::CF1{Tv}) where {Tv}
