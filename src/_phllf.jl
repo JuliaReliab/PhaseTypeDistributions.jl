@@ -1,19 +1,21 @@
-export phllf
+"""
+phllf
+"""
 
 function phllf(cf1::CF1{Tv},
-    data::AbstractPHSample, ::Type{MatT} = SparseCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
+    data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
     phllf(GPH(cf1, MatT), data, eps=eps, ufact=ufact)
 end
 
 function phllf(cf1::CF1{Tv}, cf1deriv::Dict{Symbol,CF1{Tv}},
-    data::AbstractPHSample, ::Type{MatT} = SparseCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
+    data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
     gph = GPH(cf1, MatT)
     deriv = Dict((k, GPH(v, MatT)) for (k,v) in cf1deriv)
     phllf(gph, deriv, data, eps=eps, ufact=ufact)
 end
 
 function phllf(cf1::CF1{Tv}, cf1deriv::Dict{Symbol,CF1{Tv}}, cf1deriv2::Dict{Tuple{Symbol,Symbol},CF1{Tv}},
-    data::AbstractPHSample, ::Type{MatT} = SparseCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
+    data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
     gph = GPH(cf1, MatT)
     deriv = Dict((k, GPH(v, MatT)) for (k,v) in cf1deriv)
     deriv2 = Dict((k, GPH(v, MatT)) for (k,v) in cf1deriv2)

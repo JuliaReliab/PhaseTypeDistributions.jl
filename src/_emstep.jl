@@ -1,6 +1,4 @@
 
-export estep!, mstep!, Estep
-
 mutable struct Estep{Tv,MatT}
     etotal::Tv
     eb::Vector{Tv}
@@ -50,14 +48,14 @@ end
         right = rightbound(qv * data.tdat[k], eps) + 1
         weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
         vf[k] = zero(alpha)
-        unifstep!(Trans(), P, poi, (0, right), weight, copy(vf[k-1]), vf[k])
+        unifstep!(:T, P, poi, (0, right), weight, copy(vf[k-1]), vf[k])
         scale = @dot(vf[k], tau)
         @scal(1.0/scale, vf[k])
         @axpy(data.wdat[k], vf[k], eres.ey)
 
         blf[k] = scale
         vb[k] = zero(alpha)
-        unifstep!(NoTrans(), P, poi, (0, right), weight, copy(vb[k-1]), vb[k])
+        unifstep!(:N, P, poi, (0, right), weight, copy(vb[k-1]), vb[k])
         scale = @dot(alpha, vb[k])
         @scal(1.0/scale, vb[k])
         @axpy(data.wdat[k], vb[k], eres.eb)
@@ -72,7 +70,7 @@ end
         right = rightbound(qv * data.tdat[k+1], eps) + 1
         weight = poipmf!(qv * data.tdat[k+1], poi, left=0, right=right)
         vc[k] = zeros(Tv, dim)
-        unifstep!(Trans(), P, poi, (0, right), weight, copy(vc[k+1]), vc[k])
+        unifstep!(:T, P, poi, (0, right), weight, copy(vc[k+1]), vc[k])
         @scal(1.0/blf[k], vc[k])
         @axpy(data.wdat[k]/blf[k], alpha, vc[k])
     end
@@ -83,7 +81,7 @@ end
         right = rightbound(qv * data.tdat[k], eps) + 1
         weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
         tmpb .= Tv(0)
-        convunifstep!(Trans(), NoTrans(), P, poi, (0, right), weight, qv*weight,
+        convunifstep!(:T, :N, P, poi, (0, right), weight, qv*weight,
             vc[k], vb[k-1], tmpb, tmpn)
         for i = 1:length(tmpn)
             eres.en[i] += tmpn[i]
@@ -166,6 +164,30 @@ function mstep!(ph::GPH{Tv,SparseCSC{Tv,Ti}}, eres::Estep{Tv,SparseCSC{Tv,Ti}}) 
         ph.tau[i] = eres.ey[i] / eres.ez[i]
         tmp[i] += ph.tau[i]
         ph.T.val[d[i]] = -tmp[i]
+    end
+    nothing
+end
+
+function mstep!(ph::GPH{Tv,SparseMatrixCSC{Tv,Ti}}, eres::Estep{Tv,SparseMatrixCSC{Tv,Ti}}) where {Tv,Ti}
+    dim = ph.dim
+    tmp = zeros(Tv, dim)
+    d = zeros(Ti, dim)
+    for j = 1:dim
+        for z = eres.en.colptr[j]:eres.en.colptr[j+1]-1
+            i = eres.en.rowval[z]
+            if i != j
+                ph.T[z] = eres.en[z] / eres.ez[i]
+                tmp[i] += ph.T[z]
+            else
+                d[i] = z
+            end
+        end
+    end
+    for i = 1:dim
+        ph.alpha[i] = eres.eb[i] / eres.etotal
+        ph.tau[i] = eres.ey[i] / eres.ez[i]
+        tmp[i] += ph.tau[i]
+        ph.T.nzval[d[i]] = -tmp[i]
     end
     nothing
 end

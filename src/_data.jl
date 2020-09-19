@@ -2,8 +2,6 @@
 Data structure
 """
 
-export WeightedSample, PointSample
-
 abstract type AbstractPHSample end
 
 struct WeightedSample{Tv} <: AbstractPHSample

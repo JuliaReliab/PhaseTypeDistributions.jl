@@ -1,6 +1,5 @@
-export initializePH
 
-function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseCSC;
+function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
     shapes = Tv[1, 4, 16, 64, 256, 1024],
     scales = Tv[0.5, 1.0, 2.0],
     maxiter = 5, verbose = false, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}

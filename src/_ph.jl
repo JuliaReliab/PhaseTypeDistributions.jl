@@ -2,10 +2,6 @@
 Phase-Type Distributions
 """
 
-import Base
-
-export CF1, GPH
-
 abstract type AbstractPHDistribution end
 
 struct GPH{Tv,MatT} <: AbstractPHDistribution
@@ -58,7 +54,7 @@ end
 
 function GPH(cf1::CF1{Tv}) where {Tv}
     dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, SparseCSC(T), tau)
+    GPH(dim, alpha, sparse(T), tau)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{Matrix{Tv}}) where {Tv}
@@ -74,6 +70,11 @@ end
 function GPH(cf1::CF1{Tv}, ::Type{SparseCSC{Tv,Ti}}) where {Ti,Tv}
     dim, alpha, T, tau = _togph(cf1)
     GPH(dim, alpha, SparseCSC(T), tau)
+end
+
+function GPH(cf1::CF1{Tv}, ::Type{SparseMatrixCSC{Tv,Ti}}) where {Ti,Tv}
+    dim, alpha, T, tau = _togph(cf1)
+    GPH(dim, alpha, sparse(T), tau)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCOO{Tv,Ti}}) where {Ti,Tv}
@@ -94,6 +95,11 @@ end
 function GPH(cf1::CF1{Tv}, ::Type{SparseCSC}) where {Ti,Tv}
     dim, alpha, T, tau = _togph(cf1)
     GPH(dim, alpha, SparseCSC(T), tau)
+end
+
+function GPH(cf1::CF1{Tv}, ::Type{SparseMatrixCSC}) where {Ti,Tv}
+    dim, alpha, T, tau = _togph(cf1)
+    GPH(dim, alpha, sparse(T), tau)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCOO}) where {Ti,Tv}

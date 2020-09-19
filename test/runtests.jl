@@ -4,6 +4,7 @@ using NMarkov
 using Test
 using Distributions
 using LinearAlgebra
+using SparseArrays
 
 @testset "Test of CF1" begin
     alpha = [0.1, 0.3, 0.6]
@@ -19,6 +20,9 @@ using LinearAlgebra
     gph = GPH(cf1, SparseCSR)
     @test gph.T.colind == [1, 2, 2, 3, 3]
     @test gph.T.val == [-0.4, 0.4, -1.4, 1.4, -10.0]
+    gph = GPH(cf1, SparseMatrixCSC)
+    @test gph.T.rowval == [1, 1, 2, 2, 3]
+    @test gph.T.nzval == [-0.4, 0.4, -1.4, 1.4, -10.0]
 end
 
 @testset "Test for wsample" begin
@@ -42,6 +46,30 @@ end
     dat = PointSample(t)
     eres = Estep(ph)
 
+    @time llf = estep!(cf1, dat, eres)
+    @time llf = estep!(cf1, dat, eres)
+    @test sum(eres.ez) ≈ sum(t)
+
+    ph = GPH(cf1, SparseCOO)
+    t = rand(100)
+    dat = PointSample(t)
+    eres = Estep(ph)
+    @time llf = estep!(cf1, dat, eres)
+    @time llf = estep!(cf1, dat, eres)
+    @test sum(eres.ez) ≈ sum(t)
+
+    ph = GPH(cf1, SparseCSR)
+    t = rand(100)
+    dat = PointSample(t)
+    eres = Estep(ph)
+    @time llf = estep!(cf1, dat, eres)
+    @time llf = estep!(cf1, dat, eres)
+    @test sum(eres.ez) ≈ sum(t)
+
+    ph = GPH(cf1, SparseMatrixCSC)
+    t = rand(100)
+    dat = PointSample(t)
+    eres = Estep(ph)
     @time llf = estep!(cf1, dat, eres)
     @time llf = estep!(cf1, dat, eres)
     @test sum(eres.ez) ≈ sum(t)

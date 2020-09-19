@@ -1,9 +1,18 @@
 module PhaseTypeDistributions
 
-using SparseMatrix: SparseCSR, SparseCSC, SparseCOO, spdiag, nnz, BlockCOO
-using NMarkov: rightbound, poipmf!, poipmf, unif, unifstep!, Trans, NoTrans, @scal, @axpy, @dot, convunifstep!, itime
 using Origin: @origin
+using SparseArrays: SparseMatrixCSC, nnz, sparse
+using SparseMatrix: SparseCSR, SparseCSC, SparseCOO, spdiag, BlockCOO
+using NMarkov: rightbound, poipmf!, poipmf, unif, unifstep!, @scal, @axpy, @dot, convunifstep!, itime
 using Deformula: deint
+
+export CF1, GPH
+export phllf
+export phfit!, phfit
+export estep!, mstep!, Estep
+export phcdf, phpdf, phccdf
+export WeightedSample, PointSample
+export initializePH
 
 include("_ph.jl")
 include("_phunif.jl")

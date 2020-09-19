@@ -1,7 +1,6 @@
-export phfit!, phfit
 
 # TODO: interface should be changed so that we can control deformula aprameters
-function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::Type{MatT} = SparseCSC;
+function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::Type{MatT} = SparseMatrixCSC;
     initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = [false, false],
     steps = 50,
     shapes = Tv[1, 4, 16, 64, 256, 1024], scales = Tv[0.5, 1.0, 2.0], init_maxiter = 5,
@@ -12,7 +11,7 @@ function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::
         scales=scales, init_maxiter=init_maxiter, steps=steps, maxiter=maxiter, reltol=reltol)
 end
 
-function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseCSC;
+function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
     initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = [false, false],
     steps = 50,
     shapes = Tv[1, 4, 16, 64, 256, 1024], scales = Tv[0.5, 1.0, 2.0], init_maxiter = 5,
@@ -30,7 +29,7 @@ function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseCSC;
     return newcf1, llf, conv, iter, rerror
 end
 
-function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseCSC;
+function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
     eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort = true, verbose = false,
     steps = 50, maxiter = 5000, reltol = Tv(1.0e-8)) where {Tv,MatT}
     iter = 0
