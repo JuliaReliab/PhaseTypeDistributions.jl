@@ -222,8 +222,8 @@ end
     end
     ph = GPH(res[1])
     @test phpdf(res[1], 0.0) == sum(ph.alpha .* ph.tau)
-    @test phcdf(res[1], 0.0) == 0.0
-    @test phccdf(res[1], 0.0) == 1.0
+    @test phcdf(res[1], 0.0) ≈ 0.0
+    @test phccdf(res[1], 0.0) ≈ 1.0
 end
 
 @testset "Test of pdf 1" begin
