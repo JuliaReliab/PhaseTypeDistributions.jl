@@ -56,7 +56,7 @@ function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::
         m1=m1, init_maxiter=init_maxiter, steps=steps, maxiter=maxiter, reltol=reltol)
 end
 
-@origin (vf => 0, vb => 0, vc => 0) function estep!(ph::GPH{Tv,MatT},
+@inbounds @origin (vf => 0, vb => 0, vc => 0) function estep!(ph::GPH{Tv,MatT},
     data::WeightedSample{Tv}, eres::Estep{Tv,MatT}; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
 
     dim, alpha, tau = ph.dim, ph.alpha, ph.tau
