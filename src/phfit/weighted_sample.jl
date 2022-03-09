@@ -2,7 +2,8 @@
 Data structure
 """
 
-abstract type AbstractPHSample end
+using NMarkov: itime
+using Deformula: deint
 
 struct WeightedSample{Tv} <: AbstractPHSample
     length::Int
@@ -11,7 +12,7 @@ struct WeightedSample{Tv} <: AbstractPHSample
     wdat::Vector{Tv}
 end
 
-function _phmean(data::WeightedSample{Tv}) where Tv
+function mean(data::WeightedSample{Tv}) where Tv
     totalt = Tv(0)
     totalw = Tv(0)
     ct = Tv(0)

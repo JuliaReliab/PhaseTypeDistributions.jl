@@ -48,31 +48,31 @@ end
         right = rightbound(qv * data.tdat[k], eps) + 1
         weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
         vf[k] = zero(alpha)
-        unifstep!(:T, P, poi, (0, right), weight, copy(vf[k-1]), vf[k])
+        # unifstep!(:T, P, poi, (0, right), weight, copy(vf[k-1]), vf[k])
         scale = @dot(vf[k], tau)
-        @scal(1.0/scale, vf[k])
-        @axpy(data.wdat[k], vf[k], eres.ey)
+        scal!(1.0/scale, vf[k])
+        axpy!(data.wdat[k], vf[k], eres.ey)
 
         blf[k] = scale
         vb[k] = zero(alpha)
-        unifstep!(:N, P, poi, (0, right), weight, copy(vb[k-1]), vb[k])
+        # unifstep!(:N, P, poi, (0, right), weight, copy(vb[k-1]), vb[k])
         scale = @dot(alpha, vb[k])
-        @scal(1.0/scale, vb[k])
-        @axpy(data.wdat[k], vb[k], eres.eb)
+        scal!(1.0/scale, vb[k])
+        axpy!(data.wdat[k], vb[k], eres.eb)
 
         tllf += log(blf[k])
         llf += data.wdat[k] * tllf
     end
 
     vc[m] = zeros(Tv, dim)
-    @axpy(data.wdat[m]/blf[m], alpha, vc[m])
+    axpy!(data.wdat[m]/blf[m], alpha, vc[m])
     for k = m-1:-1:1
         right = rightbound(qv * data.tdat[k+1], eps) + 1
         weight = poipmf!(qv * data.tdat[k+1], poi, left=0, right=right)
         vc[k] = zeros(Tv, dim)
-        unifstep!(:T, P, poi, (0, right), weight, copy(vc[k+1]), vc[k])
-        @scal(1.0/blf[k], vc[k])
-        @axpy(data.wdat[k]/blf[k], alpha, vc[k])
+        # unifstep!(:T, P, poi, (0, right), weight, copy(vc[k+1]), vc[k])
+        scal!(1.0/blf[k], vc[k])
+        axpy!(data.wdat[k]/blf[k], alpha, vc[k])
     end
 
     tmpb = similar(alpha)
@@ -81,8 +81,8 @@ end
         right = rightbound(qv * data.tdat[k], eps) + 1
         weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
         tmpb .= Tv(0)
-        convunifstep!(:T, :N, P, poi, (0, right), weight, qv*weight,
-            vc[k], vb[k-1], tmpb, tmpn)
+        # convunifstep!(:T, :N, P, poi, (0, right), weight, qv*weight,
+        #     vc[k], vb[k-1], tmpb, tmpn)
         for i = 1:length(tmpn)
             eres.en[i] += tmpn[i]
             tmpn[i] = Tv(0)

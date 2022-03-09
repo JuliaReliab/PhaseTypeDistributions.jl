@@ -9,12 +9,13 @@ Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NMarkov = "c5cca998-98d3-11ea-1288-bb4300628a81"
 Origin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
+PolynomialRoots = "3a141323-8675-5d76-9d11-e1df1406c778"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SparseMatrix = "b2a93422-1445-416e-a290-5781b57493d3"
 
 [compat]
-NMarkov = "0.3.2"
-SparseMatrix = "0.2.2"
+NMarkov = "0.3.4"
+SparseMatrix = "0.2.3"
 julia = "1"
 
 [extras]

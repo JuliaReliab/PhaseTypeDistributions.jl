@@ -143,9 +143,9 @@ Uniformization
     f1 .= prob[left] * f0
     for u = left+1:right
         f0 .= P' * f0
-        @axpy(prob[u], f0, f1)
+        axpy!(prob[u], f0, f1)
     end
-    @scal(1/weight, f1)
+    scal!(1/weight, f1)
     nothing
 end
 
@@ -166,14 +166,14 @@ end
             f0dash[k] .= P' * f0dash[k] + Pdash[k]' * f0
         end
         f0 .= P' * f0
-        @axpy(prob[u], f0, f1)
+        axpy!(prob[u], f0, f1)
         for k = eachindex(f0dash)
-            @axpy(prob[u], f0dash[k], f1dash[k])
+            axpy!(prob[u], f0dash[k], f1dash[k])
         end
     end
-    @scal(1/weight, f1)
+    scal!(1/weight, f1)
     for k = eachindex(f1dash)
-        @scal(1/weight, f1dash[k])
+        scal!(1/weight, f1dash[k])
     end
     nothing
 end
@@ -204,20 +204,20 @@ end
         end
         f0 .= P' * f0
 
-        @axpy(prob[u], f0, f1)
+        axpy!(prob[u], f0, f1)
         for k = eachindex(f0dash)
-            @axpy(prob[u], f0dash[k], f1dash[k])
+            axpy!(prob[u], f0dash[k], f1dash[k])
         end
         for k = eachindex(f0dashdash)
-            @axpy(prob[u], f0dashdash[k], f1dashdash[k])
+            axpy!(prob[u], f0dashdash[k], f1dashdash[k])
         end
     end
-    @scal(1/weight, f1)
+    scal!(1/weight, f1)
     for k = eachindex(f1dash)
-        @scal(1/weight, f1dash[k])
+        scal!(1/weight, f1dash[k])
     end
     for k = eachindex(f1dashdash)
-        @scal(1/weight, f1dashdash[k])
+        scal!(1/weight, f1dashdash[k])
     end
     nothing
 end

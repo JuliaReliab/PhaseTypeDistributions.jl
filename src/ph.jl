@@ -2,20 +2,78 @@
 Phase-Type Distributions
 """
 
+using SparseArrays: SparseMatrixCSC, nnz, sparse
+using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
+
+export
+    CF1,
+    GPH,
+    cf1sort,
+    cf1sort!,
+    phunif
+
+"""
+AbstractPHDistribution
+
+An abstract type for PH distributions.
+The subtypes are GPH, CF1, etc.
+"""
+
 abstract type AbstractPHDistribution end
 
-struct GPH{Tv,MatT} <: AbstractPHDistribution
+"""
+GPH{Tv,MatT}
+
+The model parameters for the general PH distribution (GPH). Tv is the type of elements. Usually this is Float64.
+MatT is the type of matrix to express the infinitesimal generator T. MatT can take Matrix, SparseArrays.SparseMatrixCSC, SparseCSR, SparseCSC, SparseCOO.
+- dim: the number of phases
+- alpha: the initial probability vector
+- T: the infinitesimal generator
+- tau: the exit rate vector for the absorbing state
+
+The p.d.f. of GPH is
+
+```math
+f(t) = \alpha \exp(T t) \tau
+```
+"""
+
+mutable struct GPH{Tv,MatT} <: AbstractPHDistribution
     dim::Int
     alpha::Vector{Tv}
     T::MatT
     tau::Vector{Tv}
 end
 
+function GPH(alpha::Vector{Tv}, T::MatT, tau::Vector{Tv}) where {Tv,MatT}
+    m, n = size(T)
+    @assert m == n && length(alpha) == length(tau) && length(alpha) == m
+    GPH{Tv,MatT}(m, alpha, T, tau)
+end
+
 function Base.copy(gph::GPH{Tv,MatT}) where {Tv,MatT}
     GPH{Tv,MatT}(gph.dim, copy(gph.alpha), copy(gph.T), copy(gph.tau))
 end
 
-struct CF1{Tv} <: AbstractPHDistribution
+"""
+CF1{Tv}
+
+The model parameter for the canonical form 1 (CF1). Tv is the type of elements. Usually this is Float64.
+- dim: the number of phases
+- alpha: the initial probability vector
+- rate: transition rates to the next state
+
+CF1 has a special structure on the inifinitesimal generator. The phase transition does not have any cycle,
+and the phase represents the stage such as Erlang distribution. Unlike Erlang distribution, the transition rate to next stage
+is allowed to be any value (All the state transition rates of Erlang distributon are same). In addition, the start stage
+is determined by the initial probability vector.
+
+The p.d.f. of CF1 is
+
+
+"""
+
+mutable struct CF1{Tv} <: AbstractPHDistribution
     dim::Int
     alpha::Vector{Tv}
     rate::Vector{Tv}
@@ -28,7 +86,7 @@ end
 function CF1(alpha::Vector{Tv}, rate::Vector{Tv}) where Tv
     @assert length(alpha) == length(rate)
     n = length(alpha)
-    alpha, rate = _cf1_sort(alpha, rate)
+    alpha, rate = cf1sort(alpha, rate)
     CF1(n, alpha, rate)
 end
 
@@ -107,29 +165,44 @@ function GPH(cf1::CF1{Tv}, ::Type{SparseCOO}) where {Ti,Tv}
     GPH(dim, alpha, T, tau)
 end
 
-function _cf1_sort(alpha::Vector{Tv}, rate::Vector{Tv}) where {Tv}
+"""
+cf1sort
+cf1sort!
+
+Make the CF1 from bidiagonal acyclic PH (APH). The difference between the bidiagonal APH and the CF1 is
+the stage transition rates are sorted or not. Then these functions provide the sorted state transition rates
+and the corresponding initial probability vectors
+
+- alpha: the initial probability vector
+- rate: the stage transition rate vector
+
+The output is the sorted state transition rates and the corresponding initial probability vectors.
+In the case of cf1sort!, alpha and rate are changed directly.
+"""
+
+function cf1sort(alpha::Vector{Tv}, rate::Vector{Tv}) where {Tv}
     a = copy(alpha)
     b = copy(rate)
-    _cf1_sort!(a, b)
+    cf1sort!(a, b)
     return a, b
 end
 
-function _cf1_sort!(a::Vector{Tv}, b::Vector{Tv}) where {Tv}
+function cf1sort!(a::Vector{Tv}, b::Vector{Tv}) where {Tv}
     for i = 1:length(a)-1
         if b[i] > b[i+1]
-            _cf1_swap!(i, i+1, a, b)
+            cf1swap!(i, i+1, a, b)
             for j = i:-1:2
                 if b[j-1] <= b[j]
                     break
                 end
-                _cf1_swap!(j-1, j, a, b)
+                cf1swap!(j-1, j, a, b)
             end
         end
     end
     nothing
 end
 
-function _cf1_swap!(i::Int, j::Int, alpha::Vector{Tv}, rate::Vector{Tv}) where {Tv}
+function cf1swap!(i::Int, j::Int, alpha::Vector{Tv}, rate::Vector{Tv}) where {Tv}
     w = rate[j] / rate[i]
     alpha[i] += (Tv(1) - w) * alpha[j]
     alpha[j] *= w
