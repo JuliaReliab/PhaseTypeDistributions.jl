@@ -96,7 +96,7 @@ end
                 axpy!(poi[i], xtmp, vf[k])
             end
         end
-        # scal!(1.0/weight, vf[k])
+        scal!(1.0/weight, vf[k])
         scale = @dot(vf[k], tau)
         scal!(1.0/scale, vf[k])
         axpy!(data.wdat[k], vf[k], eres.ey)

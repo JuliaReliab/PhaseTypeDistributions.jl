@@ -1,6 +1,6 @@
 using PhaseTypeDistributions: GPH, CF1, cf1sort!
 using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
-using SparseArrays: SparseMatrixCSC
+using SparseArrays: SparseMatrixCSC, nnz
 
 export phfit
 
@@ -9,7 +9,7 @@ function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = Spars
     m1 = Tv[0.5, 1.0, 2.0],
     maxiter = 5, verbose = false, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
     verbose && println("Initializing CF1 ...")
-    m = _phmean(data)
+    m = mean(data)
     maxllf = typemin(Tv)
     maxph = cf1
     eres = Estep(GPH(cf1, MatT))

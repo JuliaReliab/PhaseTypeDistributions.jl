@@ -1,6 +1,6 @@
 using Origin: @origin
 using SparseMatrix: gemv!, scal!, axpy!, BlockCOO
-using NMarkov: @dot, itime, unif, rightbound, poipmf!
+using NMarkov: @dot, itime, unif, rightbound, poipmf!, poipmf
 
 export
     phpdf,
@@ -68,9 +68,9 @@ function phcomp(t::Tv, alpha::Vector{Tv}, T::AbstractMatrix{Tv}, tau::Vector{Tv}
     right = rightbound(qv*t, eps)
     weight, poi = poipmf(qv*t, right, left=0)
 
-    y = zero(x)
+    y = zero(alpha)
     xtmp = copy(alpha)
-    tmpv = similar(x)
+    tmpv = similar(alpha)
     @origin (poi => 0) begin
         axpy!(poi[0], xtmp, y)
         for i = 1:right

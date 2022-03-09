@@ -7,5 +7,6 @@ include("cf1mom.jl")
 
 include("phfit_common.jl")
 include("phfit_density.jl")
+include("phllf.jl")
 
 end
