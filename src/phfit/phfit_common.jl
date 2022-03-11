@@ -93,7 +93,7 @@ function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatri
             break
         end
     end
-    return llf, conv, iter, rerror
+    return llf, conv, iter, rerror, data
 end
 
 mutable struct Estep{Tv,MatT}
