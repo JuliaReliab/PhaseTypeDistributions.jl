@@ -1,7 +1,7 @@
 name = "PhaseTypeDistributions"
 uuid = "6af5a0ae-9b1e-11ea-302b-a1bb748cae78"
 authors = ["Hiroyuki Okamura"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 Deformula = "92955551-dcbb-4ab3-ac34-b1f61f738b48"
@@ -12,6 +12,7 @@ Origin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
 PolynomialRoots = "3a141323-8675-5d76-9d11-e1df1406c778"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SparseMatrix = "b2a93422-1445-416e-a290-5781b57493d3"
+SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 
 [compat]
 NMarkov = "0.3.4"

@@ -24,7 +24,7 @@ function mean(data::WeightedSample{Tv}) where Tv
         totalt += data.wdat[i] * ct
         totalw += data.wdat[i]
     end
-    return totalt / totalw
+    totalt / totalw
 end
 
 function WeightedSample(t::Vector{Tv}, w::Vector{Tv}) where Tv
