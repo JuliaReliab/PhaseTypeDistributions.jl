@@ -201,3 +201,49 @@ end
     @test true
 end
 
+### group poi
+
+@testset "Test for groupsample" begin
+    t = rand(10)
+    x = rand(0:10, 10)
+    dat = GroupTruncPoiSample(t, x)
+    println(dat)
+    sum(t .<= dat.maxtime) == 1
+end
+
+@testset "Test of estep" begin
+    alpha = [0.1, 0.3, 0.6]
+    rate = [1.4, 0.4, 2.0]
+    cf1 = CF1(alpha, rate)
+    ph = GPH(cf1, SparseMatrixCSC)
+
+    t = rand(10)
+    x = rand(0:10, 10)
+    data = GroupTruncPoiSample(t, x)
+    eres = Estep(ph)
+
+    @time llf = estep!(cf1, data, eres)
+    @time llf = estep!(cf1, data, eres)
+    totalt = 0.0
+    ct = 0.0
+    for i = eachindex(data.tdat)
+        ct += data.tdat[i]
+        if data.gdat[i] >= 0
+            totalt += data.gdat[i] * ct
+        end
+        if !iszero(data.idat[i])
+            totalt += ct
+        end
+    end
+    @test true
+end
+
+@testset "Test of phfit 2" begin
+    t = rand(100)
+    x = rand(0:10, 100)
+    dat = GroupTruncPoiSample(t, x)
+
+    res = phfit(CF1(10), dat, verbose=[true, true])
+    println(res)
+    @test true
+end
