@@ -37,7 +37,8 @@ function phcdf(ph::GPH{Tv}, t::TimeT; eps=Tv(1.0e-8), ufact=Tv(1.01)) where {Tim
         alpha[i] = ph.alpha[i]
     end
     tau[ph.dim+1] = Tv(1)
-    T = sparse(BlockCOO(2, 2, [(1, 1, ph.T), (1, 2, reshape(ph.tau, ph.dim, 1)), (2, 2, zeros(1,1))]))
+    T = SparseCSC(BlockCOO(2, 2, [(1, 1, ph.T), (1, 2, reshape(ph.tau, ph.dim, 1)), (2, 2, ones(1,1))]))
+    T.val[end] = 0.0
     phcomp(t, alpha, T, tau, eps, ufact)
 end
 
@@ -85,6 +86,7 @@ end
 
 function phcomp(ts::AbstractVector{Tv}, alpha::Vector{Tv}, T::AbstractMatrix{Tv}, tau::Vector{Tv}, eps::Tv, ufact::Tv) where {Tv}
     P, qv = unif(T, ufact)
+    println(P)
     perm = sortperm(ts)
     dt, maxt = itime(ts[perm])
     right = rightbound(qv*maxt, eps)
@@ -101,8 +103,7 @@ function phcomp(ts::AbstractVector{Tv}, alpha::Vector{Tv}, T::AbstractMatrix{Tv}
         @origin (poi => 0) begin
             axpy!(poi[0], xtmp, y)
             for i = 1:right
-                gemv!('T', 1.0, P, xtmp, false, tmpv)
-                @. xtmp = tmpv
+                gemv!('T', 1.0, P, xtmp, false, tmpv); @. xtmp = tmpv
                 axpy!(poi[i], xtmp, y)
             end
         end

@@ -54,6 +54,18 @@ end
     @test isapprox(res1, res2)
 end
 
+@testset "Test cdf" begin
+    alpha = [0.1, 0.3, 0.6]
+    rate = [1.4, 0.4, 10.0]
+    ph1 = CF1(alpha, rate)
+
+    ts = LinRange(0.0, 10.0, 100)
+    res1 = phcdf(ph1, ts)
+    for i = 1:length(res1)-1
+        @test res1[i] <= res1[i+1]
+    end
+end
+
 @testset "Test mean" begin
     alpha = [0.1, 0.3, 0.6]
     rate = [1.4, 0.4, 10.0]
