@@ -1,3 +1,7 @@
+# 0.2.4
+
+- bugfix: phcdf
+
 # 0.2.3
 
 - add phfit for group data
