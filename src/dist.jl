@@ -86,7 +86,6 @@ end
 
 function phcomp(ts::AbstractVector{Tv}, alpha::Vector{Tv}, T::AbstractMatrix{Tv}, tau::Vector{Tv}, eps::Tv, ufact::Tv) where {Tv}
     P, qv = unif(T, ufact)
-    println(P)
     perm = sortperm(ts)
     dt, maxt = itime(ts[perm])
     right = rightbound(qv*maxt, eps)
