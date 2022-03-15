@@ -81,7 +81,7 @@ function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatri
         verbose && println("iter=$(iter) llf=$(llf) rerror=$(rerror)")
 
         if llf < prevllf
-            println("Warning: llf does not increase at iter=$(iter)")
+            @warn("llf does not increase at iter=$(iter); previous $(prevllf), current $(llf)")
         end
 
         if rerror < reltol
