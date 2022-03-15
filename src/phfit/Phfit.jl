@@ -11,5 +11,6 @@ include("phfit_density.jl")
 include("phllf.jl")
 
 include("phfit_group.jl")
+include("phfit_leftright.jl")
 
 end
