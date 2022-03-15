@@ -1,3 +1,7 @@
+# 0.2.5
+
+- Implementation for Left truncation right censored data
+
 # 0.2.4
 
 - bugfix: phcdf
