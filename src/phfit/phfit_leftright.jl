@@ -10,18 +10,26 @@ struct LeftTruncRightCensoredSample <: AbstractPHSample
     length::Int
     maxtime::Float64
     tdat::Vector{Float64}
-    nu::Vector{Bool}
-    delta::Vector{Bool}
+    nu::Vector{Int} # indicator: 0 exact, 1 right censoring, 3 left truncation
 end
 
 function LeftTruncRightCensoredSample(t::Vector{Float64}, tau::Vector{Float64}, delta::Vector{Bool})
-    d = [(t, true, c) for (t,c) = zip(t, delta)]
-    append!(d, [(t, false, true) for t = tau])
-    sort!(d, by = x -> x[1])
-    s = [d[1][1], diff([x[1] for x = d])...]
-    nu = [x[2] for x = d]
-    delta = [x[3] for x = d]
-    LeftTruncRightCensoredSample(length(s), maximum(s), s, nu, delta)
+    dat = []
+    for (t,c) = zip(t, delta)
+        if c == 1
+            push!(dat, (t, 0))
+        else
+            push!(dat, (t, 1))
+        end
+    end
+    for t = tau
+        push!(dat, (t, 3))
+    end
+    sort!(dat, by = x -> x[1])
+    t = [x[1] for x = dat]
+    nu = [x[2] for x = dat]
+    s, maxtime = itime(t)
+    LeftTruncRightCensoredSample(length(s), maxtime, s, nu)
 end
 
 function mean(data::LeftTruncRightCensoredSample)
@@ -30,7 +38,7 @@ function mean(data::LeftTruncRightCensoredSample)
     ct = 0.0
     for i = eachindex(data.tdat)
         ct += data.tdat[i]
-        if data.nu[i] == 1
+        if data.nu[i] == 0 || data.nu[i] == 1
             totalt += ct
             totaln += 1
         end
@@ -112,7 +120,7 @@ end
         # wb[k] = 1/@dot(alpha, barvb[k])
         # wk[k] = 1/@dot(alpha, vb[k])
 
-        if data.nu[k] == 0
+        if data.nu[k] == 3 # left truncation time
             tmp = @dot(alpha, barvb[k])
             llf -= log(tmp)
             wk[k] = 0.0
@@ -122,14 +130,14 @@ end
             axpy!(-wb[k], barvb[k], eres.eb)
             axpy!(wb[k], baralpha, eres.ey)
             axpy!(-wb[k], barvf[k], eres.ey)
-        elseif data.nu[k] == 1 && data.delta[k] == 0
+        elseif data.nu[k] == 1 # right censoring time
             tmp = @dot(alpha, barvb[k])
             llf += log(tmp)
             wk[k] = 0.0
             wb[k] = 1/tmp
             axpy!(wb[k], barvb[k], eres.eb)
             axpy!(wb[k], barvf[k], eres.ey)
-        elseif data.nu[k] == 1 && data.delta[k] == 1
+        elseif data.nu[k] == 0 # observed faiure time
             tmp = @dot(alpha, vb[k])
             llf += log(tmp)
             wk[k] = 1/tmp
@@ -141,11 +149,11 @@ end
 
     # compute vectors for convolution
     vc[m] = zero(alpha)
-    if data.nu[m] == 0
+    if data.nu[m] == 3
         axpy!(-wb[m], baralpha, vc[m])
-    elseif data.nu[m] == 1 && data.delta[m] == 0
+    elseif data.nu[m] == 1
         axpy!(wb[m], baralpha, vc[m])
-    elseif data.nu[m] == 1 && data.delta[m]== 1
+    elseif data.nu[m] == 0
         axpy!(wk[m], alpha, vc[m])
     end
     @inbounds for k=m-1:-1:1
@@ -162,11 +170,11 @@ end
                 axpy!(poi[u], tmpvf, vc[k])
             end
             scal!(1/weight, vc[k])
-            if data.nu[k] == 0
+            if data.nu[k] == 3
                 axpy!(-wb[k], baralpha, vc[k])
-            elseif data.nu[k] == 1 && data.delta[k] == 0
+            elseif data.nu[k] == 1
                 axpy!(wb[k], baralpha, vc[k])
-            elseif data.nu[k] == 1 && data.delta[k]== 1
+            elseif data.nu[k] == 0
                 axpy!(wk[k], alpha, vc[k])
             end
         end
@@ -192,10 +200,10 @@ end
                 spger!(1.0/(qv*weight), vc[k], vx[l+1], 1.0, eres.en)
             end
         end
-        if data.nu[k] == 0
+        if data.nu[k] == 3
             spger!(wb[k], baralpha, one, 1.0, eres.en)
             spger!(-wb[k], baralpha, barvb[k], 1.0, eres.en)
-        elseif data.nu[k] == 1 && data.delta[k] == 0
+        elseif data.nu[k] == 1
             spger!(wb[k], baralpha, barvb[k], 1.0, eres.en)
         end
     end
