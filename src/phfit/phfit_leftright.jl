@@ -59,6 +59,7 @@ end
 
     dim, alpha, tau = ph.dim, ph.alpha, ph.tau
     P, qv = unif(ph.T, ufact)
+    @assert isfinite(qv)
     baralpha = (-ph.T)' \ alpha
     one = ones(dim)
 

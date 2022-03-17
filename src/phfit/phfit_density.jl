@@ -61,6 +61,7 @@ end
 
     dim, alpha, tau = ph.dim, ph.alpha, ph.tau
     P, qv = unif(ph.T, ufact)
+    @assert isfinite(qv)
 
     llf = Tv(0)
     tllf = Tv(0)
