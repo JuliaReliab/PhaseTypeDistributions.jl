@@ -185,6 +185,28 @@ end
     @test true
 end
 
+@testset "Test of emstep_error" begin
+    alpha = [0.0, 0.0, 0.0]
+    rate = [1.4, 0.4, 2.0]
+    cf1 = CF1(alpha, rate)
+    ph = GPH(cf1, SparseMatrixCSC)
+
+    tau = rand(0:1, 10) .* rand(10)
+    t = tau .+ rand(10)
+    delta = rand(Bool, 10)
+    for r = zip(t, tau, delta)
+        println(r)
+    end
+    # dat = PointSample(t)
+    dat = LeftTruncRightCensoredSample(t, tau, delta)
+    eres = Estep(ph)
+
+    @time llf = estep!(cf1, dat, eres)
+    println("llf------　　　　", llf)
+    println("eres-----", eres)
+    @test !isfinite(llf)
+end
+
 # ### group poi
 
 # @testset "Test for groupsample" begin

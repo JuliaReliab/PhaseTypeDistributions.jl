@@ -51,7 +51,7 @@ function estep!(ph::CF1{Tv}, data::LeftTruncRightCensoredSample, eres::Estep{Tv,
     estep!(GPH(ph, MatT), data, eres, eps=eps, ufact=ufact)
 end
 
-@origin (barvf=>0, vb=>0, barvb=>0, wk=>1, wb=>1, vc=>0, poi=>0, vx=>0) function estep!(
+@origin (barvf=>0, vb=>0, barvb=>0, wb=>1, vc=>0, poi=>0, vx=>0) function estep!(
     ph::GPH{Tv,MatT},
     data::LeftTruncRightCensoredSample,
     eres::Estep{Tv,MatT};
@@ -77,7 +77,6 @@ end
     barvf = Vector{Vector{Tv}}(undef, m+1)
     vb = Vector{Vector{Tv}}(undef, m+1)
     barvb = Vector{Vector{Tv}}(undef, m+1)
-    wk = Vector{Tv}(undef, m+1)
     wb = Vector{Tv}(undef, m+1)
     vc = Vector{Vector{Tv}}(undef, m+1)
     vx = Vector{Vector{Tv}}(undef, right + 1)
@@ -117,13 +116,9 @@ end
             gemv!('N', -1.0, ph.T, barvb[k], false, vb[k])
         end
 
-        # wb[k] = 1/@dot(alpha, barvb[k])
-        # wk[k] = 1/@dot(alpha, vb[k])
-
         if data.nu[k] == 3 # left truncation time
             tmp = @dot(alpha, barvb[k])
             llf -= log(tmp)
-            wk[k] = 0.0
             wb[k] = 1/tmp
             nn += wb[k]
             axpy!(wb[k], one, eres.eb)
@@ -133,17 +128,15 @@ end
         elseif data.nu[k] == 1 # right censoring time
             tmp = @dot(alpha, barvb[k])
             llf += log(tmp)
-            wk[k] = 0.0
             wb[k] = 1/tmp
             axpy!(wb[k], barvb[k], eres.eb)
             axpy!(wb[k], barvf[k], eres.ey)
         elseif data.nu[k] == 0 # observed faiure time
             tmp = @dot(alpha, vb[k])
             llf += log(tmp)
-            wk[k] = 1/tmp
-            wb[k] = 0.0
-            axpy!(wk[k], vb[k], eres.eb)
-            gemv!('T', -wk[k], ph.T, barvf[k], 1.0, eres.ey)
+            wb[k] = 1/tmp
+            axpy!(wb[k], vb[k], eres.eb)
+            gemv!('T', -wb[k], ph.T, barvf[k], 1.0, eres.ey)
         end
     end
 
@@ -154,7 +147,7 @@ end
     elseif data.nu[m] == 1
         axpy!(wb[m], baralpha, vc[m])
     elseif data.nu[m] == 0
-        axpy!(wk[m], alpha, vc[m])
+        axpy!(wb[m], alpha, vc[m])
     end
     @inbounds for k=m-1:-1:1
         # vc[k] = vc[k+1] * exp(T * tdat[k+1]) + ...
@@ -175,7 +168,7 @@ end
             elseif data.nu[k] == 1
                 axpy!(wb[k], baralpha, vc[k])
             elseif data.nu[k] == 0
-                axpy!(wk[k], alpha, vc[k])
+                axpy!(wb[k], alpha, vc[k])
             end
         end
     end

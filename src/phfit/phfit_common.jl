@@ -20,6 +20,9 @@ function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = Spars
                 local llf::Tv
                 for k = 1:maxiter
                     llf = estep!(newcf1, data, eres, eps=eps, ufact=ufact)
+                    if !isfinite(llf)
+                        break
+                    end
                     mstep!(newcf1, eres)
                 end
                 if !isfinite(llf)
@@ -69,11 +72,17 @@ function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatri
     local rerror::Tv
 
     llf = estep!(cf1, data, eres, eps=eps, ufact=ufact)
+    if !isfinite(llf)
+        return nothing, false, iter, nothing, data
+    end
     mstep!(cf1, eres)
     while true
         prevllf = llf
         for k = 1:steps
             llf = estep!(cf1, data, eres, eps=eps, ufact=ufact)
+            if !isfinite(llf)
+                break
+            end
             mstep!(cf1, eres, cf1sort=cf1sort)
         end
         iter += steps
