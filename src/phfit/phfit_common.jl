@@ -206,8 +206,8 @@ function mstep!(ph::GPH{Tv,SparseMatrixCSC{Tv,Ti}}, eres::Estep{Tv,SparseMatrixC
         for z = eres.en.colptr[j]:eres.en.colptr[j+1]-1
             i = eres.en.rowval[z]
             if i != j
-                ph.T[z] = eres.en[z] / eres.ez[i]
-                tmp[i] += ph.T[z]
+                ph.T.nzval[z] = eres.en.nzval[z] / eres.ez[i]
+                tmp[i] += ph.T.nzval[z]
             else
                 d[i] = z
             end

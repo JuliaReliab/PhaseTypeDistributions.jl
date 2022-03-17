@@ -1,3 +1,7 @@
+# 0.2.6
+
+- bugfix: diag for SparseMatrixCSC
+
 # 0.2.5
 
 - Implementation for Left truncation right censored data
