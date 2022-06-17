@@ -2,7 +2,7 @@
 phllf
 """
 
-using SparseMatrix: scal!, axpy!, gemv!
+using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using NMarkov: unif, rightbound, poipmf!
 
 export phllf

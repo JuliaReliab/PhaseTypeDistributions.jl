@@ -1,5 +1,6 @@
 using Origin: @origin
-using SparseMatrix: gemv!, scal!, axpy!, BlockCOO
+using LinearAlgebra.BLAS: gemv!, scal!, axpy!
+using SparseMatrix: BlockCOO
 using NMarkov: @dot, itime, unif, rightbound, poipmf!, poipmf
 
 export

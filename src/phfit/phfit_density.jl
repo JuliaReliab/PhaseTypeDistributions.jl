@@ -1,5 +1,6 @@
 using Origin: @origin
-using SparseMatrix: spdiag, scal!, axpy!, gemv!, spger!
+using LinearAlgebra.BLAS: gemv!, scal!, axpy!
+using SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
 using Deformula: deint
 

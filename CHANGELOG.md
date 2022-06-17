@@ -1,3 +1,7 @@
+# 0.2.7
+
+- bugfix: use NMarkov 0.3.5
+
 # 0.2.6
 
 - bugfix: diag for SparseMatrixCSC
