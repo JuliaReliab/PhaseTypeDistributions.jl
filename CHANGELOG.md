@@ -1,3 +1,8 @@
+# 0.2.8
+
+- add examples
+- change the result of phfit from tuple to named tuple
+
 # 0.2.7
 
 - bugfix: use NMarkov 0.3.5

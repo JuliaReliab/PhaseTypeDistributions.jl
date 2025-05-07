@@ -57,7 +57,7 @@ function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrix
     end
     llf, conv, iter, rerror, data = phfit!(newcf1, data, MatT, eps=eps, ufact=ufact,
         cf1sort=cf1sort, verbose = verbose[2], steps=steps, maxiter=maxiter, reltol=reltol)
-    return newcf1, llf, conv, iter, rerror, data
+    return (model=newcf1, llf=llf, conv=conv, iter=iter, rerror=rerror, data=data)
 end
 
 function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
