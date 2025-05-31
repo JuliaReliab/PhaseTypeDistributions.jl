@@ -12,5 +12,6 @@ include("phllf.jl")
 
 include("phfit_group.jl")
 include("phfit_leftright.jl")
+include("phfit_timespan.jl")
 
 end

@@ -1,3 +1,8 @@
+# 0.3.0
+
+- add `TimeSpanSample` for mixed point and interval data
+- add LTRC data support
+
 # 0.2.8
 
 - add examples
