@@ -196,7 +196,7 @@ end
     x = rand(0:10, 100)
     dat = GroupTruncSample(t, x)
 
-    res = phfit(CF1(10), dat, verbose=[true, true])
+    res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
     println(res)
     @test true
 end
@@ -243,7 +243,7 @@ end
     x = rand(0:10, 100)
     dat = GroupTruncPoiSample(t, x)
 
-    res = phfit(CF1(10), dat, verbose=[true, true])
+    res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
     println(res)
     @test true
 end

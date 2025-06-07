@@ -4,11 +4,6 @@ using SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
 using SpecialFunctions: loggamma
 
-export
-    GroupTruncSample,
-    GroupTruncPoiSample,
-    mean
-
 abstract type AbstractPHGroupSample <: AbstractPHSample end
 
 struct GroupTruncSample <: AbstractPHGroupSample

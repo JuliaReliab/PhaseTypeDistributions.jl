@@ -1,8 +1,6 @@
 using PhaseTypeDistributions: CF1
 using PolynomialRoots: roots
 
-export ph3mom_bobbio05
-
 function hypoerlang(; shape, initprob, rate)
   phsize = sum(shape)
   alpha = zeros(phsize)

@@ -5,4 +5,16 @@ include("dist.jl")
 
 include("phfit/Phfit.jl")
 
+export
+    phpdf,
+    phcdf,
+    phccdf,
+    phcomp,
+    phmean,
+    CF1,
+    GPH,
+    cf1sort,
+    cf1sort!,
+    phunif
+
 end

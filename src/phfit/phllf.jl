@@ -5,8 +5,6 @@ phllf
 using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using NMarkov: unif, rightbound, poipmf!
 
-export phllf
-
 function phllf(cf1::CF1{Tv},
     data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC; eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
     phllf(GPH(cf1, MatT), data, eps=eps, ufact=ufact)

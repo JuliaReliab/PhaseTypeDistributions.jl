@@ -3,10 +3,6 @@ using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
 
-export
-    LeftTruncRightCensoredSample,
-    mean
-
 struct LeftTruncRightCensoredSample <: AbstractPHSample
     length::Int
     maxtime::Float64

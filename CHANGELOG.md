@@ -1,3 +1,7 @@
+# 0.3.1
+
+- bugfix: TimeSpanSample
+
 # 0.3.0
 
 - add `TimeSpanSample` for mixed point and interval data

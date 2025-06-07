@@ -1,8 +1,7 @@
 using PhaseTypeDistributions: GPH, CF1, cf1sort!
 using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 using SparseArrays: SparseMatrixCSC, nnz
-
-export phfit
+using Printf
 
 function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
     ratio = Tv[1, 4, 16, 64, 256, 1024],
@@ -43,7 +42,7 @@ function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = Spars
 end
 
 function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
-    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = [false, false],
+    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = false, verbose_init = false,
     steps = 50,
     ratio = Tv[1, 4, 16, 64, 256, 1024], m1 = Tv[0.5, 1.0, 2.0], init_maxiter = 5,
     maxiter = 5000, reltol = Tv(1.0e-8)) where {Tv,MatT}
@@ -51,12 +50,12 @@ function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrix
     local newcf1::CF1{Tv}
     if initialize
         newcf1 = initializePH(cf1, data, MatT, ratio=ratio, m1=m1,
-            maxiter=init_maxiter, verbose = verbose[1], eps=eps, ufact=ufact)
+            maxiter=init_maxiter, verbose = verbose_init, eps=eps, ufact=ufact)
     else
         newcf1 = copy(cf1)
     end
     llf, conv, iter, rerror, data = phfit!(newcf1, data, MatT, eps=eps, ufact=ufact,
-        cf1sort=cf1sort, verbose = verbose[2], steps=steps, maxiter=maxiter, reltol=reltol)
+        cf1sort=cf1sort, verbose = verbose, steps=steps, maxiter=maxiter, reltol=reltol)
     return (model=newcf1, llf=llf, conv=conv, iter=iter, rerror=rerror, data=data)
 end
 
@@ -81,7 +80,13 @@ function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatri
         end
         iter += steps
         rerror = abs((llf - prevllf) / prevllf)
-        verbose && println("iter=$(iter) llf=$(llf) rerror=$(rerror)")
+
+        if verbose
+            @info "Iteration $(iter): llf=$(llf), rerror=$(rerror)"
+        else
+            print(@sprintf("\rprogress (%3d / %3d)", iter, maxiter))
+            flush(stdout)
+        end
 
         if llf < prevllf
             @warn("llf does not increase at iter=$(iter); previous $(prevllf), current $(llf)")

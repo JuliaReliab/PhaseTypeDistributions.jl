@@ -5,13 +5,6 @@ Phase-Type Distributions
 using SparseArrays: SparseMatrixCSC, nnz, sparse
 using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 
-export
-    CF1,
-    GPH,
-    cf1sort,
-    cf1sort!,
-    phunif
-
 """
 AbstractPHDistribution
 
@@ -145,22 +138,22 @@ function GPH(cf1::CF1{Tv}, ::Type{Matrix}) where {Tv}
     GPH(dim, alpha, Matrix(T), tau)
 end
 
-function GPH(cf1::CF1{Tv}, ::Type{SparseCSR}) where {Ti,Tv}
+function GPH(cf1::CF1{Tv}, ::Type{SparseCSR}) where {Tv}
     dim, alpha, T, tau = _togph(cf1)
     GPH(dim, alpha, SparseCSR(T), tau)
 end
 
-function GPH(cf1::CF1{Tv}, ::Type{SparseCSC}) where {Ti,Tv}
+function GPH(cf1::CF1{Tv}, ::Type{SparseCSC}) where {Tv}
     dim, alpha, T, tau = _togph(cf1)
     GPH(dim, alpha, SparseCSC(T), tau)
 end
 
-function GPH(cf1::CF1{Tv}, ::Type{SparseMatrixCSC}) where {Ti,Tv}
+function GPH(cf1::CF1{Tv}, ::Type{SparseMatrixCSC}) where {Tv}
     dim, alpha, T, tau = _togph(cf1)
     GPH(dim, alpha, sparse(T), tau)
 end
 
-function GPH(cf1::CF1{Tv}, ::Type{SparseCOO}) where {Ti,Tv}
+function GPH(cf1::CF1{Tv}, ::Type{SparseCOO}) where {Tv}
     dim, alpha, T, tau = _togph(cf1)
     GPH(dim, alpha, T, tau)
 end

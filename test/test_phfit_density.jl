@@ -229,7 +229,7 @@ end
 end
 
 @testset "Test of phfit 1" begin
-    res = phfit(CF1(10), verbose=[true, true]) do x
+    res = phfit(CF1(10), verbose=true, verbose_init=true) do x
         pdf(Weibull(2.0, 1.0), x)
     end
     println(res)
@@ -237,7 +237,7 @@ end
 end
 
 @testset "Test of pdf 1" begin
-    res = phfit(CF1(100), verbose=[true, true]) do x
+    res = phfit(CF1(100), verbose=true, verbose_init=true) do x
         pdf(Weibull(2.0, 1.0), x)
     end
     ph = GPH(res[1])
@@ -247,7 +247,7 @@ end
 end
 
 @testset "Test of pdf 1" begin
-    res = phfit(CF1(200), verbose=[true, true]) do x
+    res = phfit(CF1(200), verbose=true, verbose_init=true) do x
         pdf(Weibull(2.0, 1.0), x)
     end
     t = LinRange(0.0, 2.0, 100)
@@ -260,7 +260,7 @@ end
 end
 
 @testset "Test of phfit 1" begin
-    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+    cf1, llf0, = phfit(CF1(10), verbose=true, verbose_init=true) do x
         pdf(Weibull(2.0, 1.0), x)
     end
     data = WeightedSample((0.0, Inf64)) do x
@@ -271,7 +271,7 @@ end
 end
 
 @testset "Test of phfit 2" begin
-    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+    cf1, llf0, = phfit(CF1(10), verbose=true, verbose_init=true) do x
         pdf(Weibull(1.5, 1.0), x)
     end
     data = WeightedSample((0.0, Inf64)) do x
@@ -327,7 +327,7 @@ end
 end
 
 @testset "Test of phfit 3" begin
-    cf1, llf0, = phfit(CF1(5), verbose=[true, true]) do x
+    cf1, llf0, = phfit(CF1(5), verbose=true, verbose_init=true) do x
         pdf(Weibull(2.0, 1.0), x)
     end
     data = WeightedSample((0.0, Inf64)) do x
@@ -401,7 +401,7 @@ end
 end
 
 @testset "Test of phfit 4" begin
-    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+    cf1, llf0, = phfit(CF1(10), verbose=true, verbose_init=true) do x
         pdf(Weibull(1.5, 1.0), x)
     end
     data = WeightedSample((0.0, Inf64)) do x
@@ -534,7 +534,7 @@ end
 end
 
 @testset "Test of phfit 5" begin
-    cf1, llf0, = phfit(CF1(10), verbose=[true, true]) do x
+    cf1, llf0, = phfit(CF1(10), verbose=true, verbose_init=true) do x
         pdf(Weibull(1.5, 1.0), x)
     end
     data = WeightedSample((0.0, Inf64)) do x
@@ -585,4 +585,14 @@ end
     error = (abs(llfdashdash[s1,s2]) + 1.0 - tmp) / (abs(llfdashdash[s1,s2]) + 1.0)
     println((s1, s2, abs(((lf4 - lf3) - (lf2 - lf1)) / (2*delta)^2), abs(llfdashdash[s1,s2])))
     @test abs(error) < tol
+end
+
+@testset "Test of phfit 10" begin
+    cf1, llf0, = phfit(CF1(10), verbose_init=true) do x
+        pdf(Weibull(1.5, 1.0), x)
+    end
+    data = WeightedSample((0.0, Inf64)) do x
+        pdf(Weibull(1.5, 1.0), x)
+    end
+    println(cf1)
 end

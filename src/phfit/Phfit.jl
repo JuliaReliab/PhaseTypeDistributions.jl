@@ -14,4 +14,19 @@ include("phfit_group.jl")
 include("phfit_leftright.jl")
 include("phfit_timespan.jl")
 
+export
+    cf1mom_power,
+    cf1mom_linear,
+    ph3mom_bobbio05,
+    phfit,
+    phfit!,
+    mean,
+    WeightedSample,
+    PointSample,
+    GroupTruncSample,
+    GroupTruncPoiSample,
+    LeftTruncRightCensoredSample,
+    TimeSpanSample,
+    phllf
+
 end

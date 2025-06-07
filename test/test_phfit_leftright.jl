@@ -108,13 +108,13 @@ end
 
     @time llf = estep!(cf1, dat, eres)
     @time llf = estep!(cf1, dat, eres)
-    println("llf------　　　　", llf)
+    println("llf------", llf)
     println("eres-----", eres)
 
     mstep!(cf1, eres)
     println("param----", cf1)
     @time llf2 = estep!(cf1, dat, eres)
-    println("llf------　　　　", llf2)
+    println("llf------", llf2)
     println("eres-----", eres)
     @test llf2 > llf
 end
@@ -180,7 +180,7 @@ end
     delta = rand(Bool, 100)
     dat = LeftTruncRightCensoredSample(t, tau, delta)
 
-    res = phfit(CF1(10), dat, verbose=[true, true])
+    res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
     println(res)
     @test true
 end
@@ -249,7 +249,7 @@ end
 #     x = rand(0:10, 100)
 #     dat = GroupTruncPoiSample(t, x)
 
-#     res = phfit(CF1(10), dat, verbose=[true, true])
+#     res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
 #     println(res)
 #     @test true
 # end

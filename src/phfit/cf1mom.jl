@@ -1,7 +1,5 @@
 using PhaseTypeDistributions: CF1
 
-export cf1mom_power, cf1mom_linear
-
 """
 cf1mom_power
 cf1mom_linear

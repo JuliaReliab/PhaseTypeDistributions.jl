@@ -3,10 +3,6 @@ using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
 
-export
-    TimeSpanSample,
-    mean
-
 function _promote_union_type(xs::AbstractVector)
     types = map(typeof, xs)
     T = reduce((a, b) -> Union{a, b}, types)
@@ -271,6 +267,7 @@ end
                 scal!(1/weight, vc[k])
             end
         else
+            vc[k] = similar(alpha)
             @. vc[k] = vc[k+1]
         end
         if data.zdat[k] < k

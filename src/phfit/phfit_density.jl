@@ -4,11 +4,6 @@ using SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
 using Deformula: deint
 
-export
-    WeightedSample,
-    PointSample,
-    mean
-
 struct WeightedSample{Tv} <: AbstractPHSample
     length::Int
     maxtime::Tv
@@ -47,7 +42,7 @@ end
 
 # TODO: interface should be changed so that we can control deformula prameters
 function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::Type{MatT} = SparseMatrixCSC;
-    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = [false, false],
+    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = false, verbose_init = false,
     steps = 50,
     ratio = Tv[1, 4, 16, 64, 256, 1024], m1 = Tv[0.5, 1.0, 2.0], init_maxiter = 5,
     maxiter = 5000, reltol = Tv(1.0e-8)) where {Tv,MatT}
