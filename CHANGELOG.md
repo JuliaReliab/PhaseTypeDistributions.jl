@@ -1,6 +1,7 @@
 # 0.3.1
 
 - bugfix: TimeSpanSample
+- change type of createTimeSpanSample
 
 # 0.3.0
 

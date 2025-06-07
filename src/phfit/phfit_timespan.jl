@@ -28,7 +28,7 @@ function TimeSpanSample(t::AbstractVector, w::AbstractVector)
     createTimeSpanSample(ts, w)
 end
 
-function createTimeSpanSample(t::Vector{Union{Tv,Tuple{Tv,Tv}}}, w::Vector{Tv}) where Tv
+function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, w::Vector{Tv}) where Tv
     expanded_values = Tv[]
     weights_values = Tv[]
     index_values = Int[]
