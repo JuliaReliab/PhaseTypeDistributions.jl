@@ -1,3 +1,7 @@
+# 0.3.2
+
+- enhancement: Skip the truncation time 0 in left-truncated right-censored data
+
 # 0.3.1
 
 - bugfix: TimeSpanSample
