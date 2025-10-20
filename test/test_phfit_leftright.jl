@@ -180,7 +180,7 @@ end
     delta = rand(Bool, 100)
     dat = LeftTruncRightCensoredSample(t, tau, delta)
 
-    res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
+    res = phfit(CF1(10), dat)
     println(res)
     @test true
 end
@@ -249,7 +249,7 @@ end
 #     x = rand(0:10, 100)
 #     dat = GroupTruncPoiSample(t, x)
 
-#     res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
+#     res = phfit(CF1(10), dat)
 #     println(res)
 #     @test true
 # end

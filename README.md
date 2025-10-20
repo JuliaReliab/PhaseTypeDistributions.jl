@@ -51,7 +51,7 @@ data = WeightedSample((0.0, Inf64)) do x
 end
 
 # Fit a CF1 phase-type distribution to the data
-result = phfit(CF1(10), data, verbose = true, verbose_init = true)
+result = phfit(CF1(10), data, progress = true, progress_init = true)
 println("Log-likelihood: ", result.llf)
 println("Convergence: ", result.conv)
 println("Iterations: ", result.iter)
@@ -76,7 +76,7 @@ w = [1.0, 5.0, 1.0]
 sample = TimeSpanSample(t, w)
 
 # Fit a CF1 model using the EM algorithm
-result = phfit(CF1(5), sample, verbose = true, verbose_init = true, maxiter = 2000)
+result = phfit(CF1(5), sample, progress = true, progress_init = true, maxiter = 2000)
 
 # Output results
 println("Log-likelihood: ", result.llf)
@@ -113,7 +113,7 @@ t = [2.0, 4.0, 5.0]
 ltrc = LeftTruncRightCensoredSample(t, τ, δ)
 
 # Fit a model
-result = phfit(CF1(3), ltrc, verbose = true, verbose_init = true)
+result = phfit(CF1(3), ltrc, progress = true, progress_init = true)
 
 # Output results
 println("Log-likelihood: ", result.llf)

@@ -1,3 +1,9 @@
+# 0.4.0
+
+- enhancement: Add absolute error tolerance (abstol) to phfit!
+- Change the order of return values in phfit!
+- Change the interface to call phfit (remove verbose and verbose_init)
+
 # 0.3.2
 
 - enhancement: Skip the truncation time 0 in left-truncated right-censored data

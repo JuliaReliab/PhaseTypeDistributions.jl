@@ -42,14 +42,14 @@ end
 
 # TODO: interface should be changed so that we can control deformula prameters
 function phfit(f::Any, cf1::CF1{Tv}, bounds::Tuple{Tv,Tv} = (Tv(0), Tv(Inf)), ::Type{MatT} = SparseMatrixCSC;
-    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = false, verbose_init = false,
-    steps = 50,
+    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01),
+    steps = 10,
     ratio = Tv[1, 4, 16, 64, 256, 1024], m1 = Tv[0.5, 1.0, 2.0], init_maxiter = 5,
-    maxiter = 5000, reltol = Tv(1.0e-8)) where {Tv,MatT}
+    maxiter = 5000, abstol = Tv(1.0e-3), reltol = Tv(1.0e-6)) where {Tv,MatT}
 
     data = WeightedSample(f, bounds)
-    phfit(cf1, data, MatT, initialize=initialize, eps=eps, ufact=ufact, cf1sort=cf1sort, verbose=verbose, ratio=ratio,
-        m1=m1, init_maxiter=init_maxiter, steps=steps, maxiter=maxiter, reltol=reltol)
+    phfit(cf1, data, MatT, initialize=initialize, eps=eps, ufact=ufact, ratio=ratio,
+        m1=m1, init_maxiter=init_maxiter, steps=steps, maxiter=maxiter, abstol=abstol, reltol=reltol)
 end
 
 @inbounds @origin (vf => 0, vb => 0, vc => 0) function estep!(ph::GPH{Tv,MatT},

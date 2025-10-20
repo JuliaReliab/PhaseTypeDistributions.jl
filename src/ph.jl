@@ -49,6 +49,31 @@ function Base.copy(gph::GPH{Tv,MatT}) where {Tv,MatT}
 end
 
 """
+BidiagonalPH(alpha, rate)
+
+Create a GPH representation of the bidiagonal phase-type distribution.
+- alpha: the initial probability vector
+- rate: the stage transition rate vector
+The output is a GPH representation of the bidiagonal phase-type distribution.
+"""
+
+function BidiagonalPH(alpha::Vector{Tv}, rate::Vector{Tv}) where Tv
+    @assert length(alpha) == length(rate)
+    dim = length(alpha)
+    T = SparseMatrixCSC{Tv,Int}(dim, dim)
+    tau = zeros(Tv, dim)
+    for i = 1:dim
+        T[i,i] = -rate[i]
+        if i != dim
+            T[i,i+1] = rate[i]
+        else
+            tau[i] = rate[i]
+        end
+    end
+    GPH{Tv,SparseMatrixCSC{Tv,Int}}(dim, alpha, T, tau)
+end
+
+"""
 CF1{Tv}
 
 The model parameter for the canonical form 1 (CF1). Tv is the type of elements. Usually this is Float64.
@@ -60,9 +85,6 @@ CF1 has a special structure on the inifinitesimal generator. The phase transitio
 and the phase represents the stage such as Erlang distribution. Unlike Erlang distribution, the transition rate to next stage
 is allowed to be any value (All the state transition rates of Erlang distributon are same). In addition, the start stage
 is determined by the initial probability vector.
-
-The p.d.f. of CF1 is
-
 
 """
 

@@ -13,6 +13,7 @@ export
     phmean,
     CF1,
     GPH,
+    BidiagonalPH,
     cf1sort,
     cf1sort!,
     phunif

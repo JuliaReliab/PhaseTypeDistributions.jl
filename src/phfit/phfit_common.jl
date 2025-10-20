@@ -2,106 +2,123 @@ using PhaseTypeDistributions: GPH, CF1, cf1sort!
 using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 using SparseArrays: SparseMatrixCSC, nnz
 using Printf
+using ProgressMeter
 
-function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
+function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT}=SparseMatrixCSC;
     ratio = Tv[1, 4, 16, 64, 256, 1024],
-    m1 = Tv[0.5, 1.0, 2.0],
-    maxiter = 5, verbose = false, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
-    verbose && println("Initializing CF1 ...")
-    m = mean(data)
-    maxllf = typemin(Tv)
-    maxph = cf1
-    eres = Estep(GPH(cf1, MatT))
-    for fn = [cf1mom_power, cf1mom_linear]
-        for x = m1, s = ratio
+    m1    = Tv[0.5, 1.0, 2.0],
+    maxiter = 5, eps::Tv = Tv(1e-8), ufact::Tv = Tv(1.01),
+    progress_init::Bool = true
+) where {Tv,MatT}
+
+    m      = mean(data)
+    maxllf = -Inf
+    maxph  = cf1
+    eres   = Estep(GPH(cf1, MatT))
+
+    total = 2 * length(m1) * length(ratio)
+
+    pm = progress_init ?
+        Progress(total; desc="Initializing CF1", dt=1.0) :
+        ProgressUnknown(; dt=Inf, output=devnull)
+
+    for fn in (cf1mom_power, cf1mom_linear)
+        for x in m1, s in ratio
             try
                 newcf1 = fn(cf1.dim, m*x, s)
-                local llf::Tv
-                for k = 1:maxiter
-                    llf = estep!(newcf1, data, eres, eps=eps, ufact=ufact)
+                llf = Tv(NaN)
+                for _ in 1:maxiter
+                    llf = estep!(newcf1, data, eres; eps=eps, ufact=ufact)
                     !isfinite(llf) && break
                     mstep!(newcf1, eres)
                 end
                 if !isfinite(llf)
-                    verbose && print("-")
+                    @warn "CF1 init non-finite llf" m1=x ratio=s llf=llf
+                elseif llf > maxllf
+                    maxllf, maxph = llf, newcf1
+                    @debug "CF1 updated" m1=x ratio=s llf=llf maxllf=maxllf
                 else
-                    if maxllf < llf
-                        maxllf, maxph = llf, newcf1
-                        verbose && print("o")
-                    else
-                        verbose && print("x")
-                    end
+                    @debug "CF1 not updated" m1=x ratio=s llf=llf maxllf=maxllf
                 end
-            catch
-                verbose && print("-")
+            catch err
+                @warn "CF1 init exception" m1=x ratio=s exception=(err, catch_backtrace())
             end
+            next!(pm)
         end
-        verbose && println()
     end
+    progress_init && finish!(pm)
     return maxph
 end
 
 function phfit(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
-    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort=true, verbose = false, verbose_init = false,
-    steps = 50,
+    initialize = true, eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01),
+    steps = 10,
     ratio = Tv[1, 4, 16, 64, 256, 1024], m1 = Tv[0.5, 1.0, 2.0], init_maxiter = 5,
-    maxiter = 5000, reltol = Tv(1.0e-8)) where {Tv,MatT}
+    maxiter = 5000, abstol = Tv(1.0e-3), reltol = Tv(1.0e-5),
+    progress_init::Bool = true, progress::Bool = true) where {Tv,MatT}
 
     local newcf1::CF1{Tv}
     if initialize
-        newcf1 = initializePH(cf1, data, MatT, ratio=ratio, m1=m1,
-            maxiter=init_maxiter, verbose = verbose_init, eps=eps, ufact=ufact)
+        newcf1 = initializePH(cf1, data, MatT, ratio=ratio, m1=m1, maxiter=init_maxiter, eps=eps, ufact=ufact, progress_init=progress_init)
     else
         newcf1 = copy(cf1)
     end
-    llf, conv, iter, rerror, data = phfit!(newcf1, data, MatT, eps=eps, ufact=ufact,
-        cf1sort=cf1sort, verbose = verbose, steps=steps, maxiter=maxiter, reltol=reltol)
-    return (model=newcf1, llf=llf, conv=conv, iter=iter, rerror=rerror, data=data)
+    llf, conv, iter, data, aerror, rerror = phfit!(newcf1, data, MatT, eps=eps, ufact=ufact, steps=steps, maxiter=maxiter, abstol=abstol, reltol=reltol, progress=progress)
+    return (model=newcf1, llf=llf, conv=conv, iter=iter, data=data, aerror=aerror, rerror=rerror)
 end
 
 function phfit!(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT} = SparseMatrixCSC;
-    eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), cf1sort = true, verbose = false,
-    steps = 50, maxiter = 5000, reltol = Tv(1.0e-8)) where {Tv,MatT}
+    eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01), 
+    steps = 10, maxiter = 5000, abstol = Tv(1.0e-3), reltol = Tv(1.0e-5),
+    progress::Bool = true) where {Tv,MatT}
+
     iter = 0
     ph = GPH(cf1, MatT)
     eres = Estep(ph)
     conv = false
-    local rerror::Tv
+    local aerror::Tv = NaN
+    local rerror::Tv = NaN
 
     llf = estep!(cf1, data, eres, eps=eps, ufact=ufact)
-    !isfinite(llf) && return llf, conv, iter, NaN, data
+    !isfinite(llf) && (@warn("Initial llf is not finite at the first step: llf=$(llf)"); return llf, conv, iter, data, aerror, rerror)
     mstep!(cf1, eres)
+
+    pm = progress ? Progress(maxiter; desc="Fitting", dt=1.0) : ProgressUnknown(; dt=Inf, output=devnull)
     while true
         prevllf = llf
         for k = 1:steps
             llf = estep!(cf1, data, eres, eps=eps, ufact=ufact)
-            !isfinite(llf) && return llf, conv, iter, NaN, data
-            mstep!(cf1, eres, cf1sort=cf1sort)
+            if !isfinite(llf)
+                @warn("phfit!: llf is not finite at step $(iter+k): llf=$(llf)")
+                break
+            end
+            mstep!(cf1, eres)
         end
         iter += steps
+        aerror = abs(llf - prevllf)
         rerror = abs((llf - prevllf) / prevllf)
 
-        if verbose
-            @info "Iteration $(iter): llf=$(llf), rerror=$(rerror)"
-        else
-            print(@sprintf("\rprogress (%3d / %3d)", iter, maxiter))
-            flush(stdout)
-        end
+        @debug "phfit!: Iteration $(iter): llf=$(llf), aerror=$(aerror), rerror=$(rerror)"
 
         if llf < prevllf
-            @warn("llf does not increase at iter=$(iter); previous $(prevllf), current $(llf)")
+            @warn("phfit!: llf does not increase at iter=$(iter); previous $(prevllf), current $(llf)")
         end
 
-        if rerror < reltol
+        if aerror < abstol || rerror < reltol
+            @debug "phfit!: Converged at iteration $(iter): aerror=$(aerror), rerror=$(rerror)"
             conv = true
             break
         end
 
         if iter >= maxiter
+            @warn("phfit!: Maximum number of iterations reached: $(maxiter)")
             break
         end
+
+        update!(pm, iter)
     end
-    return llf, conv, iter, rerror, data
+    progress && finish!(pm)
+    return llf, conv, iter, data, aerror, rerror
 end
 
 mutable struct Estep{Tv,MatT}
@@ -250,7 +267,7 @@ function mstep!(ph::GPH{Tv,SparseCOO{Tv,Ti}}, eres::Estep{Tv,SparseCOO{Tv,Ti}}) 
     nothing
 end
 
-function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}; cf1sort = true) where {Tv,MatT}
+function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}) where {Tv,MatT}
     dim = cf1.dim
     total = Tv(0)
     for i = 1:dim
@@ -258,6 +275,6 @@ function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}; cf1sort = true) where {Tv,Ma
         cf1.alpha[i] = eres.eb[i] / eres.etotal
         cf1.rate[i] = total / eres.ez[i]
     end
-    cf1sort && cf1sort!(cf1.alpha, cf1.rate)
+    cf1sort!(cf1.alpha, cf1.rate)
     nothing
 end

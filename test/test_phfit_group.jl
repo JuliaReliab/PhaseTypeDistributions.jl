@@ -176,7 +176,7 @@ end
     t = rand(10)
     x = rand(0:10, 10)
     dat = GroupTruncSample(t, x)
-    cf1 = initializePH(CF1(3), dat, verbose = true)
+    cf1 = initializePH(CF1(3), dat)
     println(cf1)
     ph = GPH(cf1)
     eres = Estep(ph)
@@ -196,7 +196,7 @@ end
     x = rand(0:10, 100)
     dat = GroupTruncSample(t, x)
 
-    res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
+    res = phfit(CF1(10), dat)
     println(res)
     @test true
 end
@@ -243,7 +243,7 @@ end
     x = rand(0:10, 100)
     dat = GroupTruncPoiSample(t, x)
 
-    res = phfit(CF1(10), dat, verbose=true, verbose_init=true)
+    res = phfit(CF1(10), dat)
     println(res)
     @test true
 end
