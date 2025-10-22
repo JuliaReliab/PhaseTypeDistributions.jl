@@ -1,3 +1,7 @@
+# 0.4.1
+
+- enhancement: Sampling for CF1 and GPH distributions `phsample`
+
 # 0.4.0
 
 - enhancement: Add absolute error tolerance (abstol) to phfit!

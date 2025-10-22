@@ -11,6 +11,7 @@ export
     phccdf,
     phcomp,
     phmean,
+    phsample,
     CF1,
     GPH,
     BidiagonalPH,

@@ -1,6 +1,7 @@
 using SparseMatrix
 using SparseArrays
 using NMarkov: mexpc
+using Random
 
 @testset "Test of CF1" begin
     alpha = [0.1, 0.3, 0.6]
@@ -87,4 +88,24 @@ end
     res2 = phmean(ph2, 2)
     @test res1 > 0.0
     @test isapprox(res1, res2)
+end
+
+@testset "Test sample" begin
+    rng = MersenneTwister(1234)
+    alpha = [0.1, 0.3, 0.6]
+    rate = [1.4, 0.4, 10.0]
+    ph1 = CF1(alpha, rate)
+
+    alpha = [0.1, 0.3, 0.6]
+    T = [-1.4 1.4 0; 0 -0.4 0.4; 0 0 -10.0]
+    tau = [0, 0, 10.0]
+    ph2 = GPH(alpha, T, tau)
+
+    nsample = 10000
+    t1 = @elapsed s1 = phsample(rng, ph1, nsample)
+    t2 = @elapsed s2 = phsample(rng, ph2, nsample)
+    println("Sampling time CF1: $(t1) sec")
+    println("Mean CF1 sample: $(sum(s1)/nsample)")
+    println("Sampling time GPH: $(t2) sec")
+    println("Mean GPH sample: $(sum(s2)/nsample)")
 end

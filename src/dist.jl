@@ -2,6 +2,8 @@ using Origin: @origin
 using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using SparseMatrix: BlockCOO
 using NMarkov: @dot, itime, unif, rightbound, poipmf!, poipmf
+using Random
+using Distributions
 
 """
 phpdf
@@ -126,4 +128,60 @@ end
 
 function phmean(ph::CF1{Tv}, n::Int = 1, ::Type{MatT} = SparseMatrixCSC) where {Tv,MatT}
     phmean(GPH(ph, MatT), n)
+end
+
+"""
+phsample
+
+Generate random samples from PH distribution.
+- rng: a random number generator
+- ph: the object of PH distribution such as GPH and CF1
+- m: the number of samples
+- Return value: a vector of random samples
+"""
+
+function phsample(rng::AbstractRNG, ph::GPH{Tv,MatT}, m::Int) where {Tv,MatT}
+    dim = ph.dim
+    acat = Categorical(vcat(ph.alpha, max(Tv(0), Tv(1)-sum(ph.alpha))))
+    tcat = Vector{Categorical{Tv,Vector{Tv}}}(undef, dim)
+    work = Vector{Tv}(undef, dim+1)
+    rates = Vector{Tv}(undef, dim)
+    @inbounds for i = 1:dim
+        rates[i] = -ph.T[i,i]
+        for j = 1:dim
+            if i == j
+                work[j] = Tv(0)
+            else
+                work[j] = ph.T[i,j]
+            end
+        end
+        work[dim+1] = ph.tau[i]
+        tcat[i] = Categorical(copy(work) / sum(work))
+    end
+    samples = Vector{Tv}(undef, m)
+    @inbounds for i = 1:m
+        state = rand(rng, acat)
+        t = zero(Tv)
+        while state <= dim
+            t += randexp(rng) / rates[state]
+            state = rand(rng, tcat[state])
+        end
+        samples[i] = t
+    end
+    samples
+end
+
+function phsample(rng::AbstractRNG, ph::CF1{Tv}, m::Int) where {Tv}
+    dim = ph.dim
+    samples = Vector{Tv}(undef, m)
+    alphacat = Categorical(ph.alpha)
+    @inbounds for i = 1:m
+        state = rand(rng, alphacat)
+        t = zero(Tv)
+        for s = state:dim
+            t += randexp(rng) / ph.rate[s]
+        end
+        samples[i] = t
+    end
+    samples
 end
