@@ -1,3 +1,7 @@
+# 0.4.2
+
+- GPH includes baralpha
+
 # 0.4.1
 
 - enhancement: Sampling for CF1 and GPH distributions `phsample`

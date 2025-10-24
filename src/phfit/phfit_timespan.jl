@@ -129,10 +129,9 @@ end
     eres::Estep{Tv,MatT};
     eps::Tv = Tv(1.0e-8), ufact::Tv = Tv(1.01)) where {Tv,MatT}
 
-    dim, alpha, tau = ph.dim, ph.alpha, ph.tau
+    dim, alpha, tau, baralpha = ph.dim, ph.alpha, ph.tau, ph.baralpha
     P, qv = unif(ph.T, ufact)
     @assert isfinite(qv)
-    baralpha = (-ph.T)' \ alpha
     one = ones(dim)
 
     m = data.length

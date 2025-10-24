@@ -1,6 +1,6 @@
 using PhaseTypeDistributions: GPH, CF1, cf1sort!
 using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
-using SparseArrays: SparseMatrixCSC, nnz
+using SparseArrays: SparseMatrixCSC, nnz, sparse
 using Printf
 using ProgressMeter
 
@@ -274,6 +274,10 @@ function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}) where {Tv,MatT}
         total += eres.eb[i]
         cf1.alpha[i] = eres.eb[i] / eres.etotal
         cf1.rate[i] = total / eres.ez[i]
+        if !isfinite(cf1.rate[i])
+            cf1.alpha[i] = Tv(0)
+            cf1.rate[i] = Tv(0)
+        end
     end
     cf1sort!(cf1.alpha, cf1.rate)
     nothing

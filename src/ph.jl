@@ -5,6 +5,10 @@ Phase-Type Distributions
 using SparseArrays: SparseMatrixCSC, nnz, sparse
 using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 
+function getbaralpha(T::AbstractMatrix, alpha::AbstractVector)
+    (-T)' \ alpha
+end
+
 """
 AbstractPHDistribution
 
@@ -36,16 +40,24 @@ mutable struct GPH{Tv,MatT} <: AbstractPHDistribution
     alpha::Vector{Tv}
     T::MatT
     tau::Vector{Tv}
+    baralpha::Vector{Tv}
 end
 
 function GPH(alpha::Vector{Tv}, T::MatT, tau::Vector{Tv}) where {Tv,MatT}
     m, n = size(T)
     @assert m == n && length(alpha) == length(tau) && length(alpha) == m
-    GPH{Tv,MatT}(m, alpha, T, tau)
+    baralpha = getbaralpha(T, alpha)
+    GPH{Tv,MatT}(m, alpha, T, tau, baralpha)
+end
+
+function GPH(alpha::Vector{Tv}, T::MatT, tau::Vector{Tv}, baralpha::Vector{Tv}) where {Tv,MatT}
+    m, n = size(T)
+    @assert m == n && length(alpha) == length(tau) && length(alpha) == m && length(baralpha) == m
+    GPH{Tv,MatT}(m, alpha, T, tau, baralpha)
 end
 
 function Base.copy(gph::GPH{Tv,MatT}) where {Tv,MatT}
-    GPH{Tv,MatT}(gph.dim, copy(gph.alpha), copy(gph.T), copy(gph.tau))
+    GPH{Tv,MatT}(gph.dim, copy(gph.alpha), copy(gph.T), copy(gph.tau), copy(gph.baralpha))
 end
 
 """
@@ -122,62 +134,76 @@ function _togph(cf1::CF1{Tv}) where {Tv}
             tau[i] = rate[i]
         end
     end
-    return cf1.dim, alpha, SparseCOO(cf1.dim, cf1.dim, elem), tau
+    # make baralpha
+    baralpha = similar(alpha)
+    if rate[1] != 0.0
+        baralpha[1] = alpha[1] / rate[1]
+    else
+        baralpha[1] = 0.0
+    end
+    for i = 2:cf1.dim
+        if rate[i] != 0.0
+            baralpha[i] = (alpha[i] + rate[i-1] * baralpha[i-1]) / rate[i]
+        else
+            baralpha[i] = 0.0
+        end
+    end
+    return cf1.dim, alpha, SparseCOO(cf1.dim, cf1.dim, elem), tau, baralpha
 end
 
 function GPH(cf1::CF1{Tv}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, sparse(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, sparse(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{Matrix{Tv}}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, Matrix(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, Matrix(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCSR{Tv,Ti}}) where {Ti,Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, SparseCSR(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, SparseCSR(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCSC{Tv,Ti}}) where {Ti,Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, SparseCSC(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, SparseCSC(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseMatrixCSC{Tv,Ti}}) where {Ti,Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, sparse(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, sparse(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCOO{Tv,Ti}}) where {Ti,Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, T, tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, T, tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{Matrix}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, Matrix(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, Matrix(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCSR}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, SparseCSR(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, SparseCSR(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCSC}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, SparseCSC(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, SparseCSC(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseMatrixCSC}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, sparse(T), tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, sparse(T), tau, baralpha)
 end
 
 function GPH(cf1::CF1{Tv}, ::Type{SparseCOO}) where {Tv}
-    dim, alpha, T, tau = _togph(cf1)
-    GPH(dim, alpha, T, tau)
+    dim, alpha, T, tau, baralpha = _togph(cf1)
+    GPH(dim, alpha, T, tau, baralpha)
 end
 
 """
