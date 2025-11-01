@@ -1,3 +1,7 @@
+# 0.4.3
+
+- use ZeroOrigin instead of Origin
+
 # 0.4.2
 
 - GPH includes baralpha

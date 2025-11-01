@@ -1,4 +1,4 @@
-using Origin: @origin
+using ZeroOrigin: @origin
 using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
