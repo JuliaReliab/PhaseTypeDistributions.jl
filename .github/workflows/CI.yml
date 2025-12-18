@@ -19,7 +19,8 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.9'  # Minimum Julia version (required for [sources] support)
+          - '1.6'  # Minimum Julia version
+          - '1.9'  # Version with [sources] support
           - '1'    # Latest stable Julia
         os:
           - ubuntu-latest
@@ -36,6 +37,11 @@ jobs:
           arch: ${{ matrix.arch }}
       
       - uses: julia-actions/cache@v2
+      
+      - name: Install dependencies
+        run: |
+          julia --project=. -e "using Pkg; Pkg.add(PackageSpec(url=\"https://github.com/JuliaReliab/DEQuadrature.jl.git\"))"
+          julia --project=. -e "using Pkg; Pkg.add(PackageSpec(url=\"https://github.com/JuliaReliab/NMarkov.jl.git\"))"
       
       - uses: julia-actions/julia-buildpkg@v1
       
