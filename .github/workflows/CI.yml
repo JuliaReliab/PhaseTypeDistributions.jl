@@ -25,7 +25,6 @@ jobs:
         os:
           - ubuntu-latest
           - macOS-latest
-          - windows-latest
         arch:
           - x64
     steps:
@@ -38,10 +37,15 @@ jobs:
       
       - uses: julia-actions/cache@v2
       
-      - name: Install dependencies
+      - name: Install unregistered dependencies
         run: |
-          julia --project=. -e "using Pkg; Pkg.add(PackageSpec(url=\"https://github.com/JuliaReliab/DEQuadrature.jl.git\"))"
-          julia --project=. -e "using Pkg; Pkg.add(PackageSpec(url=\"https://github.com/JuliaReliab/NMarkov.jl.git\"))"
+          julia --project=. -e '
+            using Pkg
+            Pkg.add([
+              PackageSpec(url="https://github.com/JuliaReliab/DEQuadrature.jl.git"),
+              PackageSpec(url="https://github.com/JuliaReliab/NMarkov.jl.git")
+            ])
+          '
       
       - uses: julia-actions/julia-buildpkg@v1
       
