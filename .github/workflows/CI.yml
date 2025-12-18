@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.6'  # Minimum Julia version
+          - '1.9'  # Minimum Julia version (required for [sources] support)
           - '1'    # Latest stable Julia
         os:
           - ubuntu-latest
