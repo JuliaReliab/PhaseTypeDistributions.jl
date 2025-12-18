@@ -1,8 +1,8 @@
 using ZeroOrigin: @origin
 using LinearAlgebra.BLAS: gemv!, scal!, axpy!
-using SparseMatrix: spdiag, spger!
+using NMarkov.SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
-using Deformula: deint
+using DEQuadrature: deint
 
 struct WeightedSample{Tv} <: AbstractPHSample
     length::Int

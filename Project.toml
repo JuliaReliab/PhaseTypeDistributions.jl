@@ -1,25 +1,27 @@
 name = "PhaseTypeDistributions"
 uuid = "6af5a0ae-9b1e-11ea-302b-a1bb748cae78"
+version = "0.5.0"
 authors = ["Hiroyuki Okamura"]
-version = "0.4.3"
 
 [deps]
-Deformula = "92955551-dcbb-4ab3-ac34-b1f61f738b48"
+DEQuadrature = "92955551-dcbb-4ab3-ac34-b1f61f738b48"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NMarkov = "c5cca998-98d3-11ea-1288-bb4300628a81"
-ZeroOrigin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
 PolynomialRoots = "3a141323-8675-5d76-9d11-e1df1406c778"
-Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-SparseMatrix = "b2a93422-1445-416e-a290-5781b57493d3"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
+ZeroOrigin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
+
+[sources]
+DEQuadrature = {rev = "master", url = "https://github.com/JuliaReliab/DEQuadrature.jl.git"}
+NMarkov = {rev = "master", url = "https://github.com/JuliaReliab/NMarkov.jl.git"}
 
 [compat]
-NMarkov = "0.3.6"
-julia = "1"
+NMarkov = "0.4.0"
+julia = "1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

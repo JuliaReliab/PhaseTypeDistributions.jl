@@ -1,5 +1,5 @@
 using SparseArrays
-using SparseMatrix
+using NMarkov.SparseMatrix
 using PhaseTypeDistributions.Phfit
 using Distributions
 using LinearAlgebra

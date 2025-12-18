@@ -1,8 +1,8 @@
 using ZeroOrigin: @origin
 using LinearAlgebra.BLAS: gemv!, scal!, axpy!
-using SparseMatrix: BlockCOO
+using NMarkov.SparseMatrix: BlockCOO
 using NMarkov: @dot, itime, unif, rightbound, poipmf!, poipmf
-using Random
+import Random
 using Distributions
 
 """
@@ -140,7 +140,7 @@ Generate random samples from PH distribution.
 - Return value: a vector of random samples
 """
 
-function phsample(rng::AbstractRNG, ph::GPH{Tv,MatT}, m::Int) where {Tv,MatT}
+function phsample(rng::Random.AbstractRNG, ph::GPH{Tv,MatT}, m::Int) where {Tv,MatT}
     dim = ph.dim
     acat = Categorical(vcat(ph.alpha, max(Tv(0), Tv(1)-sum(ph.alpha))))
     tcat = Vector{Categorical{Tv,Vector{Tv}}}(undef, dim)
@@ -163,7 +163,7 @@ function phsample(rng::AbstractRNG, ph::GPH{Tv,MatT}, m::Int) where {Tv,MatT}
         state = rand(rng, acat)
         t = zero(Tv)
         while state <= dim
-            t += randexp(rng) / rates[state]
+            t += Random.randexp(rng) / rates[state]
             state = rand(rng, tcat[state])
         end
         samples[i] = t
@@ -171,7 +171,7 @@ function phsample(rng::AbstractRNG, ph::GPH{Tv,MatT}, m::Int) where {Tv,MatT}
     samples
 end
 
-function phsample(rng::AbstractRNG, ph::CF1{Tv}, m::Int) where {Tv}
+function phsample(rng::Random.AbstractRNG, ph::CF1{Tv}, m::Int) where {Tv}
     dim = ph.dim
     samples = Vector{Tv}(undef, m)
     alphacat = Categorical(ph.alpha)
@@ -179,7 +179,7 @@ function phsample(rng::AbstractRNG, ph::CF1{Tv}, m::Int) where {Tv}
         state = rand(rng, alphacat)
         t = zero(Tv)
         for s = state:dim
-            t += randexp(rng) / ph.rate[s]
+            t += Random.randexp(rng) / ph.rate[s]
         end
         samples[i] = t
     end

@@ -1,7 +1,6 @@
 using PhaseTypeDistributions: GPH, CF1, cf1sort!
-using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
+using NMarkov.SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 using SparseArrays: SparseMatrixCSC, nnz, sparse
-using Printf
 using ProgressMeter
 
 function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT}=SparseMatrixCSC;
