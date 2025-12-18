@@ -1,4 +1,4 @@
-using SparseMatrix
+using NMarkov.SparseMatrix
 using SparseArrays
 using NMarkov: mexpc
 using Random

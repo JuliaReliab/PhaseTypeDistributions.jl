@@ -3,7 +3,7 @@ Phase-Type Distributions
 """
 
 using SparseArrays: SparseMatrixCSC, nnz, sparse
-using SparseMatrix: SparseCSR, SparseCSC, SparseCOO
+using NMarkov.SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 
 function getbaralpha(T::AbstractMatrix, alpha::AbstractVector)
     (-T)' \ alpha
