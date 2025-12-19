@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.5.1]
+- Distributions.jl integration: Refined CF1/GPH implementations of `pdf`/`cdf`/`ccdf`/`mean`/`rand`; unified `t::Real` signatures to resolve method ambiguities; added interface tests.
+- Performance (minimal changes): Preallocated and reused working vectors in E-step of `phfit_timespan.jl`, `phfit_group.jl`, and `phfit_leftright.jl` using `fill!` and `.=`; improved type stability with `ones(Tv, dim)`. Algorithms and public API unchanged.
+
 ## [0.5.0]
 - Migrated from `Deformula` to `DEQuadrature`
 - Migrated from `SparseMatrix` to `NMarkov.SparseMatrix`
