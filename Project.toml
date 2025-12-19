@@ -1,6 +1,6 @@
 name = "PhaseTypeDistributions"
 uuid = "6af5a0ae-9b1e-11ea-302b-a1bb748cae78"
-version = "0.5.0"
+version = "0.5.1"
 authors = ["Hiroyuki Okamura"]
 
 [deps]

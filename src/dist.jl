@@ -3,7 +3,7 @@ using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using NMarkov.SparseMatrix: BlockCOO
 using NMarkov: @dot, itime, unif, rightbound, poipmf!, poipmf
 import Random
-using Distributions
+import Distributions: Distribution, Univariate, Continuous, Categorical, cdf, pdf, ccdf, mean, rand
 
 """
 phpdf
@@ -185,3 +185,15 @@ function phsample(rng::Random.AbstractRNG, ph::CF1{Tv}, m::Int) where {Tv}
     end
     samples
 end
+
+cdf(ph::GPH{Tv}, t::Real) where {Tv<:Real} = phcdf(ph, t)
+ccdf(ph::GPH{Tv}, t::Real) where {Tv<:Real} = phccdf(ph, t)
+pdf(ph::GPH{Tv}, t::Real) where {Tv<:Real} = phpdf(ph, t)
+mean(ph::GPH{Tv}, n::Int=1) where {Tv<:Real} = phmean(ph, n)
+rand(rng::Random.AbstractRNG, ph::GPH{Tv}, m::Int) where {Tv<:Real} = phsample(rng, ph, m)
+
+cdf(ph::CF1{Tv}, t::Real) where {Tv<:Real} = phcdf(ph, t)
+ccdf(ph::CF1{Tv}, t::Real) where {Tv<:Real} = phccdf(ph, t)
+pdf(ph::CF1{Tv}, t::Real) where {Tv<:Real} = phpdf(ph, t)
+mean(ph::CF1{Tv}, n::Int=1) where {Tv<:Real} = phmean(ph, n)
+rand(rng::Random.AbstractRNG, ph::CF1{Tv}, m::Int) where {Tv<:Real} = phsample(rng, ph, m)

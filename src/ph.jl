@@ -4,6 +4,7 @@ Phase-Type Distributions
 
 using SparseArrays: SparseMatrixCSC, nnz, sparse
 using NMarkov.SparseMatrix: SparseCSR, SparseCSC, SparseCOO
+import Distributions: Distribution, Univariate, Continuous, cdf, pdf, ccdf, mean, rand
 
 function getbaralpha(T::AbstractMatrix, alpha::AbstractVector)
     (-T)' \ alpha
@@ -16,7 +17,7 @@ An abstract type for PH distributions.
 The subtypes are GPH, CF1, etc.
 """
 
-abstract type AbstractPHDistribution end
+abstract type AbstractPHDistribution <: Distribution{Univariate,Continuous} end
 
 """
 GPH{Tv,MatT}

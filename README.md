@@ -99,6 +99,29 @@ println(cdf_values)
 println(ccdf_values)
 ```
 
+### Using Distributions.jl API
+
+CF1 and GPH implement the Distributions.jl univariate continuous API. With `using Distributions`, you can use familiar functions directly on phase-type distributions. All time arguments are `Real`.
+
+Supported functions:
+- `pdf(d, t)`, `cdf(d, t)`, `ccdf(d, t)`
+- `mean(d)`
+- `rand(d)`, `rand(d, n)`
+
+Example:
+```julia
+using PhaseTypeDistributions, Distributions
+
+cf1 = CF1([0.1, 0.3, 0.6], [1.4, 0.4, 10.0])
+
+println("mean(cf1): ", mean(cf1))
+println("pdf(cf1, 1.0): ", pdf(cf1, 1.0))
+println("cdf(cf1, 1.0): ", cdf(cf1, 1.0))
+println("ccdf(cf1, 1.0): ", ccdf(cf1, 1.0))
+
+samples = rand(cf1, 1000)
+```
+
 ### Fitting a Phase-Type Distribution
 ```julia
 using PhaseTypeDistributions
