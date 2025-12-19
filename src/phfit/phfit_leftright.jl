@@ -59,7 +59,7 @@ end
     dim, alpha, tau, baralpha = ph.dim, ph.alpha, ph.tau, ph.baralpha
     P, qv = unif(ph.T, ufact)
     @assert isfinite(qv)
-    one = ones(dim)
+    one = ones(Tv, dim)
 
     m = data.length
 
@@ -81,13 +81,20 @@ end
     vc = Vector{Vector{Tv}}(undef, m+1)
     vx = Vector{Vector{Tv}}(undef, right + 1)
     for i = 0:right
-        vx[i] = zeros(Tv,dim)
+        vx[i] = zeros(Tv, dim)
+    end
+    for i = 0:m
+        barvf[i] = zeros(Tv, dim)
+        barvb[i] = zeros(Tv, dim)
+        vb[i] = zeros(Tv, dim)
+        vf[i] = zeros(Tv, dim)
+        vc[i] = zeros(Tv, dim)
     end
 
-    barvf[0] = baralpha
-    barvb[0] = one
-    vb[0] = tau
-    vf[0] = alpha
+    copyto!(barvf[0], baralpha)
+    copyto!(barvb[0], one)
+    copyto!(vb[0], tau)
+    copyto!(vf[0], alpha)
     
     @inbounds for k = 1:m
         begin
@@ -95,7 +102,7 @@ end
             weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
 
             # barvb[k] = exp(T * tdat[k]) * barvb[k-1]
-            barvb[k] = zeros(Tv, dim)
+            fill!(barvb[k], zero(Tv))
             @. tmpvb = barvb[k-1]
             axpy!(poi[0], tmpvb, barvb[k])
             for u = 1:right
@@ -105,7 +112,7 @@ end
             scal!(1/weight, barvb[k])
 
             # vb[k] = exp(T * tdat[k]) * vb[k-1]
-            vb[k] = zeros(Tv, dim)
+            fill!(vb[k], zero(Tv))
             @. tmpvb = vb[k-1]
             axpy!(poi[0], tmpvb, vb[k])
             for u = 1:right
@@ -115,7 +122,7 @@ end
             scal!(1/weight, vb[k])
 
             # barvf[k] = barvf[k-1] * exp(T * tdat[k])
-            barvf[k] = zeros(Tv, dim)
+            fill!(barvf[k], zero(Tv))
             @. tmpvf = barvf[k-1]
             axpy!(poi[0], tmpvf, barvf[k])
             for u = 1:right
@@ -125,7 +132,7 @@ end
             scal!(1/weight, barvf[k])
 
             # vf[k] = vf[k-1] * exp(T * tdat[k])
-            vf[k] = zeros(Tv, dim)
+            fill!(vf[k], zero(Tv))
             @. tmpvf = vf[k-1]
             axpy!(poi[0], tmpvf, vf[k])
             for u = 1:right
@@ -168,7 +175,7 @@ end
     end
 
     # compute vectors for convolution
-    vc[m] = zero(tau)
+    fill!(vc[m], zero(Tv))
     if data.nu[m] == 3
         axpy!(-wb[m], one, vc[m])
     elseif data.nu[m] == 1
@@ -182,7 +189,7 @@ end
             right = rightbound(qv * data.tdat[k+1], eps) + 1
             weight = poipmf!(qv * data.tdat[k+1], poi, left=0, right=right)
 
-            vc[k] = zeros(Tv, dim)
+            fill!(vc[k], zero(Tv))
             @. tmpvb = vc[k+1]
             axpy!(poi[0], tmpvb, vc[k])
             for u = 1:right

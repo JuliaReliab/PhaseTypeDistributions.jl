@@ -60,7 +60,7 @@ end
     dim, alpha, tau, baralpha = ph.dim, ph.alpha, ph.tau, ph.baralpha
     P, qv = unif(ph.T, ufact)
     @assert isfinite(qv)
-    one = ones(dim)
+    one = ones(Tv, dim)
 
     m = data.length
 
@@ -81,12 +81,18 @@ end
     vc = Vector{Vector{Tv}}(undef, m+1)
     vx = Vector{Vector{Tv}}(undef, right + 1)
     for i = 0:right
-        vx[i] = zeros(Tv,dim)
+        vx[i] = zeros(Tv, dim)
+    end
+    for i = 0:m
+        barvf[i] = zeros(Tv, dim)
+        barvb[i] = zeros(Tv, dim)
+        vb[i] = zeros(Tv, dim)
+        vc[i] = zeros(Tv, dim)
     end
 
-    barvf[0] = baralpha
-    barvb[0] = one
-    vb[0] = tau
+    copyto!(barvf[0], baralpha)
+    copyto!(barvb[0], one)
+    copyto!(vb[0], tau)
     nn = Tv(0)
     uu = Tv(0)
     
@@ -97,8 +103,8 @@ end
             right = rightbound(qv * data.tdat[k], eps) + 1
             weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
 
-            barvf[k] = zeros(Tv, dim)
-            barvb[k] = zeros(Tv, dim)
+            fill!(barvf[k], zero(Tv))
+            fill!(barvb[k], zero(Tv))
             @. tmpvf = barvf[k-1]
             @. tmpvb = barvb[k-1]
             axpy!(poi[0], tmpvf, barvf[k])
@@ -114,7 +120,6 @@ end
         end
         # vb[k] = (-ph.T) * barvb[k]
         begin
-            vb[k] = similar(alpha)
             gemv!('N', -1.0, ph.T, barvb[k], false, vb[k])
         end
 
@@ -170,7 +175,7 @@ end
 
     # compute vectors for convolution
 
-    vc[m] = zero(alpha)
+    fill!(vc[m], zero(Tv))
     axpy!(wg[m+1] - wg[m], baralpha, vc[m])
     if data.idat[m] == true
         axpy!(wp[m], alpha, vc[m])
@@ -181,7 +186,7 @@ end
             right = rightbound(qv * data.tdat[k+1], eps) + 1
             weight = poipmf!(qv * data.tdat[k+1], poi, left=0, right=right)
 
-            vc[k] = zeros(Tv, dim)
+            fill!(vc[k], zero(Tv))
             @. tmpvf = vc[k+1]
             axpy!(poi[0], tmpvf, vc[k])
             for u = 1:right
@@ -267,7 +272,7 @@ end
     omega = data.omega
 
     baralpha = (-ph.T)' \ alpha
-    one = ones(dim)
+    one = ones(Tv, dim)
 
     m = data.length
 

@@ -132,7 +132,7 @@ end
     dim, alpha, tau, baralpha = ph.dim, ph.alpha, ph.tau, ph.baralpha
     P, qv = unif(ph.T, ufact)
     @assert isfinite(qv)
-    one = ones(dim)
+    one = ones(Tv, dim)
 
     m = data.length
 
@@ -154,12 +154,18 @@ end
     vc = Vector{Vector{Tv}}(undef, m+1)
     vx = Vector{Vector{Tv}}(undef, right + 1)
     for i = 0:right
-        vx[i] = zeros(Tv,dim)
+        vx[i] = zeros(Tv, dim)
+    end
+    for i = 0:m
+        barvf[i] = zeros(Tv, dim)
+        barvb[i] = zeros(Tv, dim)
+        vb[i] = zeros(Tv, dim)
+        vc[i] = zeros(Tv, dim)
     end
 
-    barvf[0] = baralpha
-    barvb[0] = one
-    vb[0] = tau
+    copyto!(barvf[0], baralpha)
+    copyto!(barvb[0], one)
+    copyto!(vb[0], tau)
 
     @inbounds for k = 1:m
         if data.tdat[k] > 0.0
@@ -169,8 +175,8 @@ end
                 right = rightbound(qv * data.tdat[k], eps) + 1
                 weight = poipmf!(qv * data.tdat[k], poi, left=0, right=right)
 
-                barvf[k] = zeros(Tv, dim)
-                barvb[k] = zeros(Tv, dim)
+                fill!(barvf[k], zero(Tv))
+                fill!(barvb[k], zero(Tv))
                 @. tmpvf = barvf[k-1]
                 @. tmpvb = barvb[k-1]
                 axpy!(poi[0], tmpvf, barvf[k])
@@ -186,13 +192,12 @@ end
             end
             # vb[k] = (-ph.T) * barvb[k]
             begin
-                vb[k] = similar(alpha)
                 gemv!('N', -1.0, ph.T, barvb[k], false, vb[k])
             end
         else
-            barvf[k] = copy(barvf[k-1])
-            barvb[k] = copy(barvb[k-1])
-            vb[k] = copy(vb[k-1])
+            barvf[k] .= barvf[k-1]
+            barvb[k] .= barvb[k-1]
+            vb[k] .= vb[k-1]
         end
 
         if data.zdat[k] == k # observed time
@@ -241,7 +246,7 @@ end
     end
 
     # compute vectors for convolution
-    vc[m] = zero(alpha)
+    fill!(vc[m], zero(Tv))
     if data.zdat[m] < m
         axpy!(-wb[m], baralpha, vc[m])
     elseif data.zdat[m] > m
@@ -255,8 +260,7 @@ end
             begin
                 right = rightbound(qv * data.tdat[k+1], eps) + 1
                 weight = poipmf!(qv * data.tdat[k+1], poi, left=0, right=right)
-
-                vc[k] = zeros(Tv, dim)
+                fill!(vc[k], zero(Tv))
                 @. tmpvf = vc[k+1]
                 axpy!(poi[0], tmpvf, vc[k])
                 for u = 1:right
@@ -266,8 +270,7 @@ end
                 scal!(1/weight, vc[k])
             end
         else
-            vc[k] = similar(alpha)
-            @. vc[k] = vc[k+1]
+            vc[k] .= vc[k+1]
         end
         if data.zdat[k] < k
             axpy!(-wb[k], baralpha, vc[k])
