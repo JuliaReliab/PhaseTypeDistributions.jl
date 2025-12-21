@@ -168,6 +168,7 @@ function mstep!(ph::GPH{Tv,Matrix{Tv}}, eres::Estep{Tv,Matrix{Tv}}) where Tv
         tmp[i] += ph.tau[i]
         ph.T[i,i] = -tmp[i]
     end
+    ph.baralpha = getbaralpha(ph.T, ph.alpha)
     nothing
 end
 
@@ -192,6 +193,7 @@ function mstep!(ph::GPH{Tv,SparseCSR{Tv,Ti}}, eres::Estep{Tv,SparseCSR{Tv,Ti}}) 
         tmp[i] += ph.tau[i]
         ph.T.val[d[i]] = -tmp[i]
     end
+    ph.baralpha = getbaralpha(ph.T, ph.alpha)
     nothing
 end
 
@@ -216,6 +218,7 @@ function mstep!(ph::GPH{Tv,SparseCSC{Tv,Ti}}, eres::Estep{Tv,SparseCSC{Tv,Ti}}) 
         tmp[i] += ph.tau[i]
         ph.T.val[d[i]] = -tmp[i]
     end
+    ph.baralpha = getbaralpha(ph.T, ph.alpha)
     nothing
 end
 
@@ -240,6 +243,7 @@ function mstep!(ph::GPH{Tv,SparseMatrixCSC{Tv,Ti}}, eres::Estep{Tv,SparseMatrixC
         tmp[i] += ph.tau[i]
         ph.T.nzval[d[i]] = -tmp[i]
     end
+    ph.baralpha = getbaralpha(ph.T, ph.alpha)
     nothing
 end
 
@@ -263,6 +267,7 @@ function mstep!(ph::GPH{Tv,SparseCOO{Tv,Ti}}, eres::Estep{Tv,SparseCOO{Tv,Ti}}) 
         tmp[i] += ph.tau[i]
         ph.T.val[d[i]] = -tmp[i]
     end
+    ph.baralpha = getbaralpha(ph.T, ph.alpha)
     nothing
 end
 

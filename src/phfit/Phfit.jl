@@ -1,5 +1,7 @@
 module Phfit
 
+using ..PhaseTypeDistributions: getbaralpha
+
 abstract type AbstractPHSample end
 
 include("ph3mom_bobbio05.jl")

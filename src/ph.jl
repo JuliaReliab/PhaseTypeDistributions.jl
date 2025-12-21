@@ -6,8 +6,17 @@ using SparseArrays: SparseMatrixCSC, nnz, sparse
 using NMarkov.SparseMatrix: SparseCSR, SparseCSC, SparseCOO
 import Distributions: Distribution, Univariate, Continuous, cdf, pdf, ccdf, mean, rand
 
-function getbaralpha(T::AbstractMatrix, alpha::AbstractVector)
+function getbaralpha(T::Matrix{Tv}, alpha::AbstractVector) where Tv
     (-T)' \ alpha
+end
+
+function getbaralpha(T::SparseMatrixCSC{Tv,Ti}, alpha::AbstractVector) where {Tv,Ti}
+    (-T)' \ alpha
+end
+
+function getbaralpha(T::AbstractMatrix, alpha::AbstractVector)
+    tmpT = sparse(T)
+    (-tmpT)' \ alpha
 end
 
 """
