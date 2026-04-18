@@ -37,12 +37,12 @@ Phase-type distributions represent the time until absorption in a continuous-tim
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/okamumu/PhaseTypeDistributions.jl")
+Pkg.add(url="https://github.com/JuliaReliab/PhaseTypeDistributions.jl")
 ```
 
 Or in the Julia REPL package mode (press `]`):
 ```julia
-pkg> add https://github.com/okamumu/PhaseTypeDistributions.jl
+pkg> add https://github.com/JuliaReliab/PhaseTypeDistributions.jl
 ```
 
 ## Quick Start
