@@ -286,3 +286,31 @@ function mstep!(cf1::CF1{Tv}, eres::Estep{Tv,MatT}) where {Tv,MatT}
     cf1sort!(cf1.alpha, cf1.rate)
     nothing
 end
+
+"""
+Count free parameters of a CF1 model for use in AIC.
+
+- alpha entries ≤ `alpha_tol` are treated as zero (not free).
+- rate entries within `rate_tol` of each other are treated as one parameter.
+
+Returns a named tuple `(aic, k, n_alpha, n_rate)`.
+"""
+function aic(cf1::CF1{Tv}, llf::Tv;
+    alpha_tol::Tv = Tv(1.0e-8),
+    rate_tol::Tv  = Tv(1.0e-4)
+) where Tv
+    n_alpha = max(0, count(a -> a > alpha_tol, cf1.alpha) - 1)
+
+    sorted_rates = sort(cf1.rate)
+    n_rate = 0
+    prev = Tv(-Inf)
+    for r in sorted_rates
+        if r - prev > rate_tol
+            n_rate += 1
+            prev = r
+        end
+    end
+
+    k = n_alpha + n_rate
+    return (aic = -2 * llf + 2 * k, k = k, n_alpha = n_alpha, n_rate = n_rate)
+end

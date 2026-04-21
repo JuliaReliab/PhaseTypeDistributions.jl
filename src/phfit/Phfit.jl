@@ -29,6 +29,9 @@ export
     GroupTruncPoiSample,
     LeftTruncRightCensoredSample,
     TimeSpanSample,
+    bootstrap,
+    eic,
+    aic,
     phllf
 
 end

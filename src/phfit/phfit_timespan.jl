@@ -2,6 +2,8 @@ using ZeroOrigin: @origin
 using LinearAlgebra.BLAS: gemv!, scal!, axpy!
 using NMarkov.SparseMatrix: spdiag, spger!
 using NMarkov: itime, @dot, rightbound, poipmf!, unif
+using Random
+using Distributions: Multinomial
 
 function _promote_union_type(xs::AbstractVector)
     types = map(typeof, xs)
@@ -10,51 +12,70 @@ function _promote_union_type(xs::AbstractVector)
 end
 
 struct TimeSpanSample{Tv} <: AbstractPHSample
+    # Processed fields — used by E-step
     length::Int
     maxtime::Tv
     tdat::Vector{Tv}
-    wdat::Vector{Tv}
+    ndat::Vector{Tv}   # n_i: frequency/count (bootstrap target)
+    wdat::Vector{Tv}   # w_i: analytic weight (quadrature/importance, fixed)
     zdat::Vector{Int}
+    # Raw fields — used by bootstrap to reconstruct original observations
+    rawt::Vector
+    rawn::Vector{Int}
+    raww::Vector{Tv}
 end
 
 function TimeSpanSample(t::AbstractVector)
     ts = _promote_union_type(t)
+    n = ones(Int, length(t))
     w = [1.0 for _ in t]
-    createTimeSpanSample(ts, w)
+    createTimeSpanSample(ts, n, w)
 end
 
-function TimeSpanSample(t::AbstractVector, w::AbstractVector)
+function TimeSpanSample(t::AbstractVector, n::AbstractVector)
     ts = _promote_union_type(t)
-    createTimeSpanSample(ts, w)
+    w = [1.0 for _ in t]
+    createTimeSpanSample(ts, Int.(n), w)
 end
 
-function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, w::Vector{Tv}) where Tv
+function TimeSpanSample(t::AbstractVector, n::AbstractVector, w::AbstractVector)
+    ts = _promote_union_type(t)
+    createTimeSpanSample(ts, Int.(n), float.(w))
+end
+
+function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int}, v::Vector{Tv}) where Tv
     expanded_values = Tv[]
-    weights_values = Tv[]
+    n_values = Int[]
+    v_values = Tv[]
     index_values = Int[]
     for (i, ti) in enumerate(t)
-        if abs(w[i]) < 1e-12
+        if n[i] == 0
             continue
         end
         if ti isa Tv
             push!(expanded_values, ti)
-            push!(weights_values, w[i])
+            push!(n_values, n[i])
+            push!(v_values, v[i])
             push!(index_values, i)
         elseif ti isa Tuple{Tv, Tv}
             a, b = ti
             if isinf(b)
                 push!(expanded_values, a)
-                push!(weights_values, w[i])
+                push!(n_values, n[i])
+                push!(v_values, v[i])
                 push!(index_values, -1)
             elseif a == 0
                 push!(expanded_values, b)
-                push!(weights_values, w[i])
+                push!(n_values, n[i])
+                push!(v_values, v[i])
                 push!(index_values, 0)
             else
                 push!(expanded_values, a)
                 push!(expanded_values, b)
-                push!(weights_values, w[i])
-                push!(weights_values, w[i])
+                push!(n_values, n[i])
+                push!(n_values, n[i])
+                push!(v_values, v[i])
+                push!(v_values, v[i])
                 push!(index_values, i)
                 push!(index_values, i)
             end
@@ -94,7 +115,8 @@ function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, w::Vector{Tv}
     end
 
     reordered_values = [expanded_values[j] for j in ord]
-    reordered_weights = [weights_values[j] for j in ord]
+    reordered_n = Tv[n_values[j] for j in ord]
+    reordered_v = [v_values[j] for j in ord]
     reordered_z = [z[j] for j in ord]
     for i in length(reordered_values):-1:2
         reordered_values[i] -= reordered_values[i-1]
@@ -105,8 +127,12 @@ function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, w::Vector{Tv}
         m,
         max_t,
         reordered_values,
-        reordered_weights,
-        reordered_z
+        reordered_n,
+        reordered_v,
+        reordered_z,
+        t,
+        n,
+        v
     )
 end
 
@@ -114,12 +140,12 @@ function mean(data::TimeSpanSample{Tv}) where Tv
     if data.length == 0
         return Tv(0)
     end
-    total_weight = sum(data.wdat)
+    total_weight = sum(data.ndat[i] * data.wdat[i] for i in 1:data.length)
     if total_weight == 0
         return Tv(0)
     end
     ctime = cumsum(data.tdat)
-    weighted_sum = sum(ctime[i] * data.wdat[i] for i in 1:data.length)
+    weighted_sum = sum(ctime[i] * data.ndat[i] * data.wdat[i] for i in 1:data.length)
     return weighted_sum / total_weight
 end
 
@@ -201,19 +227,21 @@ end
         end
 
         if data.zdat[k] == k # observed time
-            nn += data.wdat[k]
+            nw = data.ndat[k] * data.wdat[k]
+            nn += nw
             tmp = @dot(alpha, vb[k])
-            llf += data.wdat[k] * log(tmp)
-            wb[k] = data.wdat[k] / tmp
+            llf += nw * log(tmp)
+            wb[k] = nw / tmp
             axpy!(wb[k], vb[k], eres.eb)
             gemv!('T', -wb[k], ph.T, barvf[k], 1.0, eres.ey)
         elseif data.zdat[k] == 0 # interval [0, t]
-            nn += data.wdat[k]
+            nw = data.ndat[k] * data.wdat[k]
+            nn += nw
             @. tmpv = one
             axpy!(-1.0, barvb[k], tmpv)
             tmp = @dot(alpha, tmpv)
-            llf += data.wdat[k] * log(tmp)
-            wb[k] = data.wdat[k] / tmp
+            llf += nw * log(tmp)
+            wb[k] = nw / tmp
             axpy!(wb[k], tmpv, eres.eb)
             spger!(wb[k], baralpha, tmpv, 1.0, eres.en)
 
@@ -221,20 +249,22 @@ end
             axpy!(-1.0, barvf[k], tmpv)
             axpy!(wb[k], tmpv, eres.ey)
         elseif data.zdat[k] == m + 1 # interval [tdat[k], ∞)
-            nn += data.wdat[k]
+            nw = data.ndat[k] * data.wdat[k]
+            nn += nw
             tmp = @dot(alpha, barvb[k])
-            llf += data.wdat[k] * log(tmp)
-            wb[k] = data.wdat[k] / tmp
+            llf += nw * log(tmp)
+            wb[k] = nw / tmp
             axpy!(wb[k], barvb[k], eres.eb)
             axpy!(wb[k], barvf[k], eres.ey)
             spger!(wb[k], baralpha, barvb[k], 1.0, eres.en)
         elseif data.zdat[k] < k # interval [tdat_z, t]
-            nn += data.wdat[k]
+            nw = data.ndat[k] * data.wdat[k]
+            nn += nw
             @. tmpv = barvb[data.zdat[k]]
             axpy!(-1.0, barvb[k], tmpv)
             tmp = @dot(alpha, tmpv)
-            llf += data.wdat[k] * log(tmp)
-            wb[k] = data.wdat[k] / tmp
+            llf += nw * log(tmp)
+            wb[k] = nw / tmp
             wb[data.zdat[k]] = wb[k]
             axpy!(wb[k], tmpv, eres.eb)
             spger!(wb[k], baralpha, tmpv, 1.0, eres.en)
@@ -316,3 +346,52 @@ end
     llf
 end
 
+function phllf(cf1::CF1{Tv}, data::TimeSpanSample{Tv}, ::Type{MatT}=SparseMatrixCSC;
+    eps::Tv=Tv(1.0e-8), ufact::Tv=Tv(1.01)) where {Tv,MatT}
+    eres = Estep(GPH(cf1, MatT))
+    estep!(cf1, data, eres, eps=eps, ufact=ufact)
+end
+
+function bootstrap(rng::AbstractRNG, data::TimeSpanSample{Tv}) where Tv
+    N = sum(data.rawn)
+    n_new = rand(rng, Multinomial(N, data.rawn ./ N))
+    TimeSpanSample(data.rawt, n_new, data.raww)
+end
+
+bootstrap(data::TimeSpanSample) = bootstrap(Random.default_rng(), data)
+
+function eic(rng::AbstractRNG, ph0::CF1{Tv}, llf0::Tv, d0::TimeSpanSample{Tv}, data::TimeSpanSample{Tv};
+    bsample::Int = 100,
+    maxiter::Int = 5000,
+    steps::Int = 10,
+    abstol::Tv = Tv(1.0e-3),
+    reltol::Tv = Tv(1.0e-5)
+) where Tv
+    d1 = [bootstrap(rng, data) for _ in 1:bsample]
+    bias = Vector{Union{Tv,Nothing}}(undef, bsample)
+    Threads.@threads for i in 1:bsample
+        try
+            res = phfit(ph0, d1[i]; initialize=false, maxiter=maxiter, steps=steps,
+                        abstol=abstol, reltol=reltol, progress=false, progress_init=false)
+            ph1 = res.model
+            b1 = res.llf
+            b2 = phllf(ph0, d1[i])
+            b3 = llf0
+            b4 = phllf(ph1, d0)
+            bias[i] = b1 - b2 + b3 - b4
+        catch
+            bias[i] = nothing
+        end
+    end
+    v = Tv[x for x in bias if x !== nothing]
+    n = length(v)
+    mu = sum(v) / n
+    sigma = sqrt(sum((x - mu)^2 for x in v) / (n - 1))
+    se = sigma / sqrt(n)
+    return (
+        eic       = -2 * (llf0 - mu),
+        ci_lower  = -2 * (llf0 - (mu + 1.96 * se)),
+        ci_upper  = -2 * (llf0 - (mu - 1.96 * se)),
+        nvalid    = n,
+    )
+end
