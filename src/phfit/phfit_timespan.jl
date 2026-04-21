@@ -11,6 +11,12 @@ function _promote_union_type(xs::AbstractVector)
     convert(Vector{T}, xs)
 end
 
+function _scalar_eltype(ts::AbstractVector)
+    isempty(ts) && return Float64
+    x = first(ts)
+    return x isa Tuple ? typeof(x[1]) : typeof(x)
+end
+
 struct TimeSpanSample{Tv} <: AbstractPHSample
     # Processed fields — used by E-step
     length::Int
@@ -27,20 +33,23 @@ end
 
 function TimeSpanSample(t::AbstractVector)
     ts = _promote_union_type(t)
+    Tv = _scalar_eltype(ts)
     n = ones(Int, length(t))
-    w = [1.0 for _ in t]
+    w = ones(Tv, length(t))
     createTimeSpanSample(ts, n, w)
 end
 
 function TimeSpanSample(t::AbstractVector, n::AbstractVector)
     ts = _promote_union_type(t)
-    w = [1.0 for _ in t]
+    Tv = _scalar_eltype(ts)
+    w = ones(Tv, length(t))
     createTimeSpanSample(ts, Int.(n), w)
 end
 
 function TimeSpanSample(t::AbstractVector, n::AbstractVector, w::AbstractVector)
     ts = _promote_union_type(t)
-    createTimeSpanSample(ts, Int.(n), float.(w))
+    Tv = _scalar_eltype(ts)
+    createTimeSpanSample(ts, Int.(n), Tv.(w))
 end
 
 function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int}, v::Vector{Tv}) where Tv
@@ -381,7 +390,8 @@ function eic(rng::AbstractRNG, ph0::CF1{Tv}, data::TimeSpanSample{Tv};
             b3 = llf0
             b4 = phllf(ph1, d0)
             bias[i] = b1 - b2 + b3 - b4
-        catch
+        catch e
+            @warn "eic: bootstrap fit failed" i=i exception=(e, catch_backtrace())
             bias[i] = nothing
         end
     end

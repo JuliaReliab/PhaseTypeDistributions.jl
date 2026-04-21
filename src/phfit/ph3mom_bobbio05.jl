@@ -78,7 +78,6 @@ function ph3mom_bobbio05(m1, m2, m3)
         c1 = 4*n*(2-n)
         c0 = n*(n-2)
         fs = roots([c0, c1, c2, c3, c4])
-        println(fs)
         found = 0
         for i = 1:length(fs)
             f = fs[i]

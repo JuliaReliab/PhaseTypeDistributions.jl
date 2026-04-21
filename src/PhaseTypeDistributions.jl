@@ -16,7 +16,6 @@ export
     GPH,
     BidiagonalPH,
     cf1sort,
-    cf1sort!,
-    phunif
+    cf1sort!
 
 end
