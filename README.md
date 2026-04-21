@@ -19,6 +19,7 @@ A Julia package for working with **Phase-Type (PH) distributions**, providing to
   - Left-truncated and right-censored data (survival analysis)
   - Weighted samples and density-based fitting
   - Grouped data
+- **Model Selection**: AIC and Extended Information Criterion (EIC) with bootstrap confidence intervals
 - **Efficient Computation**: Optimized implementations using sparse matrices and numerical quadrature
 - **Flexible API**: Easy-to-use interface for both research and practical applications
 
@@ -173,6 +174,109 @@ You can also compute the weighted mean of the sample:
 println("Mean: ", mean(sample))
 ```
 
+### Bootstrap, EIC, and AIC for Model Selection
+
+After fitting a model to `TimeSpanSample` data, you can assess model quality using the
+**Extended Information Criterion (EIC)** and the **Akaike Information Criterion (AIC)**.
+
+#### `bootstrap` — multinomial resampling
+
+`bootstrap` draws a new `TimeSpanSample` by resampling observation counts from a Multinomial
+distribution, leaving the analytic weights `wdat` unchanged.  It is used internally by `eic`
+but can also be called directly.
+
+```julia
+using PhaseTypeDistributions
+using PhaseTypeDistributions.Phfit
+using Random
+
+t   = [0.5, 1.2, (0.8, 1.5), (2.0, Inf), 0.3]
+dat = TimeSpanSample(t)
+
+bdat = bootstrap(dat)                          # uses default RNG
+bdat = bootstrap(MersenneTwister(42), dat)     # reproducible
+```
+
+The total observation count is always preserved: `sum(bdat.rawn) == sum(dat.rawn)`.
+
+#### `eic` — Extended Information Criterion
+
+`eic` estimates the bias between in-sample log-likelihood and generalisation performance via
+bootstrap resampling.  The returned named tuple contains:
+
+| field | description |
+|-------|-------------|
+| `eic` | point estimate: −2·(llf₀ − mean(bias)) |
+| `ci_lower` | upper edge of 95 % CI (larger EIC value; bias underestimated) |
+| `ci_upper` | lower edge of 95 % CI (smaller EIC value; bias overestimated) |
+| `nvalid` | number of bootstrap replicates that converged |
+
+Note: the EIC scale follows −2·log-likelihood convention, so **smaller is better**.
+The interval satisfies `ci_upper ≤ eic ≤ ci_lower`.
+
+```julia
+using PhaseTypeDistributions
+using PhaseTypeDistributions.Phfit
+using Random
+
+# Prepare data and fit
+t   = vcat(rand(MersenneTwister(1), 80), [(0.5*i, 0.5*i+1.0) for i in 1:20])
+dat = TimeSpanSample(t)
+res = phfit(CF1(5), dat; progress_init=false, progress=false)
+
+# EIC with 200 bootstrap replicates (default rng)
+r = eic(res.model, dat; bsample=200)
+println("EIC: ",       r.eic)
+println("95% CI: [",   r.ci_upper, ", ", r.ci_lower, "]")
+println("Valid reps: ", r.nvalid)
+
+# Reproducible run
+r2 = eic(MersenneTwister(42), res.model, dat; bsample=200)
+```
+
+Keyword arguments:
+
+| keyword | default | description |
+|---------|---------|-------------|
+| `bsample` | 100 | number of bootstrap replicates |
+| `maxiter` | 5000 | max EM iterations per replicate |
+| `steps` | 10 | EM steps between convergence checks |
+| `abstol` | 1e-3 | absolute log-likelihood tolerance |
+| `reltol` | 1e-5 | relative log-likelihood tolerance |
+
+#### `aic` — Akaike Information Criterion
+
+`aic` computes AIC using an effective parameter count for CF1: free `alpha` entries (nonzero
+minus one, for the sum-to-one constraint) plus distinct `rate` values.
+
+```julia
+using PhaseTypeDistributions
+using PhaseTypeDistributions.Phfit
+
+t   = rand(100)
+dat = TimeSpanSample(t)
+res = phfit(CF1(5), dat; progress_init=false, progress=false)
+
+r = aic(res.model, res.llf)
+println("AIC:    ", r.aic)
+println("k:      ", r.k,       "  (effective parameters)")
+println("n_alpha:", r.n_alpha, "  (free alpha entries)")
+println("n_rate: ", r.n_rate,  "  (distinct rates)")
+
+# Custom tolerances
+r2 = aic(res.model, res.llf; alpha_tol=1e-6, rate_tol=1e-3)
+```
+
+**Comparing models of different sizes:**
+
+```julia
+results = [phfit(CF1(n), dat; progress_init=false, progress=false) for n in 3:7]
+for res in results
+    r = aic(res.model, res.llf)
+    println("dim=$(res.model.dim)  AIC=$(round(r.aic, digits=2))  k=$(r.k)")
+end
+```
+
 ### Handling Left-Truncated and Right-Censored Data using `LeftTruncRightCensoredSample`
 
 The `LeftTruncRightCensoredSample` structure allows you to fit phase-type distributions to survival data that are subject to **left truncation** and **right censoring**, common in medical and reliability applications.
@@ -242,6 +346,12 @@ gph = GPH(alpha, T, tau)
   - `TimeSpanSample` - Mixed point and interval data
   - `LeftTruncRightCensoredSample` - Survival analysis data
   - `GroupSample` - Grouped observations
+
+### Model Selection
+- `phllf(cf1, data)` - Log-likelihood for a fitted model
+- `aic(cf1, llf; alpha_tol, rate_tol)` - AIC with effective parameter count for CF1
+- `eic(ph0, data; bsample, ...)` - Extended Information Criterion via bootstrap (returns `eic`, `ci_lower`, `ci_upper`, `nvalid`)
+- `bootstrap(data)` - Multinomial resampling of a `TimeSpanSample`
 
 ## Advanced Features
 

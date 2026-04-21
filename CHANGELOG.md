@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1]
+
+### Bug fixes
+- `eic`: fixed `ci_lower`/`ci_upper` swap — the correct relationship is `ci_lower ≤ eic ≤ ci_upper`.
+
+### API simplification
+- `eic(ph0, data; bsample, ...)` / `eic(rng, ph0, data; bsample, ...)`: `llf0` and `d0` are no longer separate arguments; they are now computed internally from `data`. The old 5-argument form has been removed.
+
 ## [0.6.0]
 
 ### Breaking changes

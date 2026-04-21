@@ -360,13 +360,15 @@ end
 
 bootstrap(data::TimeSpanSample) = bootstrap(Random.default_rng(), data)
 
-function eic(rng::AbstractRNG, ph0::CF1{Tv}, llf0::Tv, d0::TimeSpanSample{Tv}, data::TimeSpanSample{Tv};
+function eic(rng::AbstractRNG, ph0::CF1{Tv}, data::TimeSpanSample{Tv};
     bsample::Int = 100,
     maxiter::Int = 5000,
     steps::Int = 10,
     abstol::Tv = Tv(1.0e-3),
     reltol::Tv = Tv(1.0e-5)
 ) where Tv
+    llf0 = phllf(ph0, data)
+    d0 = TimeSpanSample(data.rawt, data.rawn, data.raww)
     d1 = [bootstrap(rng, data) for _ in 1:bsample]
     bias = Vector{Union{Tv,Nothing}}(undef, bsample)
     Threads.@threads for i in 1:bsample
@@ -390,8 +392,10 @@ function eic(rng::AbstractRNG, ph0::CF1{Tv}, llf0::Tv, d0::TimeSpanSample{Tv}, d
     se = sigma / sqrt(n)
     return (
         eic       = -2 * (llf0 - mu),
-        ci_lower  = -2 * (llf0 - (mu + 1.96 * se)),
-        ci_upper  = -2 * (llf0 - (mu - 1.96 * se)),
+        ci_lower  = -2 * (llf0 - (mu - 1.96 * se)),
+        ci_upper  = -2 * (llf0 - (mu + 1.96 * se)),
         nvalid    = n,
     )
 end
+
+eic(ph0::CF1{Tv}, data::TimeSpanSample{Tv}; kwargs...) where Tv = eic(Random.default_rng(), ph0, data; kwargs...)

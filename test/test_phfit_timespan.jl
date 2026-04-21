@@ -171,7 +171,7 @@ end
     rng = MersenneTwister(1)
     dat = TimeSpanSample(rand(rng, 100))
     res = phfit(CF1(5), dat; progress_init=false, progress=false)
-    r   = eic(MersenneTwister(42), res.model, res.llf, dat, dat; bsample=30)
+    r   = eic(MersenneTwister(42), res.model, dat; bsample=30)
 
     @test isfinite(r.eic)
     @test isfinite(r.ci_lower)
@@ -181,13 +181,13 @@ end
 end
 
 @testset "eic CI brackets point estimate" begin
-    # ci_upper = eic - 2*1.96*se  <  eic  <  eic + 2*1.96*se = ci_lower
+    # ci_lower = eic - 2*1.96*se  <  eic  <  eic + 2*1.96*se = ci_upper
     rng = MersenneTwister(1)
     dat = TimeSpanSample(rand(rng, 100))
     res = phfit(CF1(5), dat; progress_init=false, progress=false)
-    r   = eic(MersenneTwister(42), res.model, res.llf, dat, dat; bsample=30)
+    r   = eic(MersenneTwister(42), res.model, dat; bsample=30)
 
-    @test r.ci_upper <= r.eic <= r.ci_lower
+    @test r.ci_lower <= r.eic <= r.ci_upper
 end
 
 @testset "eic reproducibility" begin
@@ -195,8 +195,8 @@ end
     dat = TimeSpanSample(rand(rng, 80))
     res = phfit(CF1(4), dat; progress_init=false, progress=false)
 
-    r1 = eic(MersenneTwister(7), res.model, res.llf, dat, dat; bsample=20)
-    r2 = eic(MersenneTwister(7), res.model, res.llf, dat, dat; bsample=20)
+    r1 = eic(MersenneTwister(7), res.model, dat; bsample=20)
+    r2 = eic(MersenneTwister(7), res.model, dat; bsample=20)
 
     @test r1.eic      == r2.eic
     @test r1.ci_lower == r2.ci_lower
@@ -208,20 +208,7 @@ end
     rng = MersenneTwister(1)
     dat = TimeSpanSample(rand(rng, 200))
     res = phfit(CF1(3), dat; progress_init=false, progress=false)
-    r   = eic(MersenneTwister(42), res.model, res.llf, dat, dat; bsample=20)
+    r   = eic(MersenneTwister(42), res.model, dat; bsample=20)
 
     @test r.nvalid == 20
-end
-
-@testset "eic d0 and data can differ" begin
-    rng  = MersenneTwister(1)
-    dall = rand(rng, 200)
-    dtrain = TimeSpanSample(dall[1:150])
-    dtest  = TimeSpanSample(dall[151:end])
-    res  = phfit(CF1(4), dtrain; progress_init=false, progress=false)
-    llf0 = phllf(res.model, dtest)
-    r    = eic(MersenneTwister(42), res.model, llf0, dtest, dtrain; bsample=20)
-
-    @test isfinite(r.eic)
-    @test r.nvalid > 0
 end
