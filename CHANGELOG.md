@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.6.3]
+
+### New features
+- `TimeSpanSample(data::WeightedSample)`: converts a `WeightedSample` to `TimeSpanSample`. Each quadrature point becomes a point observation with count 1 and the original quadrature weight as analytic weight `wdat`.
+- `TimeSpanSample(data::GroupTruncSample)`: converts a `GroupTruncSample` to `TimeSpanSample`. Group interval observations `(t_{k-1}, t_k]` become interval-censored entries; exact observations (`idat[k] == true`) become point entries; the last interval `[t_m, ∞)` becomes a right-censored entry. Unobserved intervals (`gdat[k] == -1`) are skipped.
+
 ## [0.6.1]
 
 ### Bug fixes

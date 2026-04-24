@@ -52,6 +52,39 @@ function TimeSpanSample(t::AbstractVector, n::AbstractVector, w::AbstractVector)
     createTimeSpanSample(ts, Int.(n), Tv.(w))
 end
 
+function TimeSpanSample(data::WeightedSample{Tv}) where Tv
+    t = cumsum(data.tdat)
+    n = ones(Int, data.length)
+    w = copy(data.wdat)
+    createTimeSpanSample(t, n, w)
+end
+
+function TimeSpanSample(data::GroupTruncSample)
+    Tv = Float64
+    cumtimes = cumsum(data.tdat)
+    ts = Union{Tv, Tuple{Tv, Tv}}[]
+    ns = Int[]
+    prev_t = Tv(0)
+    for k in 1:data.length
+        t_k = cumtimes[k]
+        if data.gdat[k] >= 0 && data.tdat[k] != 0.0
+            push!(ts, (prev_t, t_k))
+            push!(ns, data.gdat[k])
+        end
+        if data.idat[k]
+            push!(ts, t_k)
+            push!(ns, 1)
+        end
+        prev_t = t_k
+    end
+    if data.gdatlast >= 0
+        push!(ts, (prev_t, Tv(Inf)))
+        push!(ns, data.gdatlast)
+    end
+    w = ones(Tv, length(ts))
+    createTimeSpanSample(ts, ns, w)
+end
+
 function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int}, v::Vector{Tv}) where Tv
     expanded_values = Tv[]
     n_values = Int[]
