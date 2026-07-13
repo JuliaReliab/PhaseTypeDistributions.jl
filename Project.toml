@@ -15,12 +15,17 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 ZeroOrigin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
 
-[sources]
-DEQuadrature = {rev = "master", url = "https://github.com/JuliaReliab/DEQuadrature.jl.git"}
-NMarkov = {rev = "master", url = "https://github.com/JuliaReliab/NMarkov.jl.git"}
+[sources.DEQuadrature]
+rev = "master"
+url = "https://github.com/JuliaReliab/DEQuadrature.jl.git"
+
+[sources.NMarkov]
+rev = "master"
+url = "https://github.com/JuliaReliab/NMarkov.jl.git"
 
 [compat]
 NMarkov = "0.4.0"
+ProgressMeter = "1"
 julia = "1.6"
 
 [extras]
