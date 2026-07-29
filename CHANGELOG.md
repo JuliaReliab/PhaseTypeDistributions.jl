@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0]
+
+### New features
+- Left truncation support for `TimeSpanSample`. All constructors accept a `tau` keyword argument (`TimeSpanSample(t; tau)`, `TimeSpanSample(t, n; tau)`, `TimeSpanSample(t, n, w; tau)`), where `tau[i] > 0` is the left truncation time of observation `i` and `tau[i] == 0` means no truncation. The likelihood contribution of observation `i` is divided by `S(tau[i])`. `TimeSpanSample` now covers everything `LeftTruncRightCensoredSample` does, plus interval censoring, per-observation counts/weights, and bootstrap-based model selection.
+- The truncation times are stored in a new `rawtau` field and are preserved by `bootstrap` and `eic`.
+
+### Bug fixes
+- `TimeSpanSample`: two adjacent observations of the same kind were mistaken for a single interval. `[(0.5, Inf), (0.8, Inf)]` was treated as the interval `[0.5, 0.8]` instead of two right-censored observations, and `[(0.0, 1.0), (0.0, 2.0)]` as `[1.0, 2.0]` instead of two `[0, b]` intervals. Both produced a silently wrong likelihood. Interval endpoints are now paired by an explicit entry kind rather than by a reused sentinel index.
+
+### Breaking changes
+- `TimeSpanSample` gained a tenth field (`rawtau`); code constructing the struct positionally must be updated. The documented constructors are unaffected.
+
 ## [0.6.3]
 
 ### New features

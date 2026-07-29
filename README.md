@@ -174,6 +174,26 @@ You can also compute the weighted mean of the sample:
 println("Mean: ", mean(sample))
 ```
 
+#### Left truncation
+
+Pass a `tau` vector to condition each observation on survival past a truncation time.
+`tau[i] > 0` means observation `i` was only observable given that the event had not yet
+occurred at time `tau[i]`; `tau[i] == 0` means no truncation. The likelihood of that
+observation is divided by `S(tau[i])`.
+
+```julia
+t   = [1.5, (2.0, 3.0), (4.0, Inf)]
+tau = [0.5, 1.0, 0.0]          # third observation is not truncated
+
+sample = TimeSpanSample(t; tau = tau)
+result = phfit(CF1(3), sample, progress = false, progress_init = false)
+```
+
+`tau` combines freely with counts and analytic weights (`TimeSpanSample(t, n, w; tau = tau)`)
+and is carried through `bootstrap` and `eic`. This makes `TimeSpanSample` a superset of
+`LeftTruncRightCensoredSample`, which handles left truncation and right censoring but not
+interval censoring, per-observation counts, or bootstrap-based model selection.
+
 ### Bootstrap, EIC, and AIC for Model Selection
 
 After fitting a model to `TimeSpanSample` data, you can assess model quality using the

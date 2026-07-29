@@ -29,27 +29,35 @@ struct TimeSpanSample{Tv} <: AbstractPHSample
     rawt::Vector
     rawn::Vector{Int}
     raww::Vector{Tv}
+    rawtau::Vector{Tv}   # left truncation time per observation (0 = not truncated)
 end
 
-function TimeSpanSample(t::AbstractVector)
+function TimeSpanSample(t::AbstractVector; tau=nothing)
     ts = _promote_union_type(t)
     Tv = _scalar_eltype(ts)
     n = ones(Int, length(t))
     w = ones(Tv, length(t))
-    createTimeSpanSample(ts, n, w)
+    createTimeSpanSample(ts, n, w, _totau(Tv, tau, length(t)))
 end
 
-function TimeSpanSample(t::AbstractVector, n::AbstractVector)
+function TimeSpanSample(t::AbstractVector, n::AbstractVector; tau=nothing)
     ts = _promote_union_type(t)
     Tv = _scalar_eltype(ts)
     w = ones(Tv, length(t))
-    createTimeSpanSample(ts, Int.(n), w)
+    createTimeSpanSample(ts, Int.(n), w, _totau(Tv, tau, length(t)))
 end
 
-function TimeSpanSample(t::AbstractVector, n::AbstractVector, w::AbstractVector)
+function TimeSpanSample(t::AbstractVector, n::AbstractVector, w::AbstractVector; tau=nothing)
     ts = _promote_union_type(t)
     Tv = _scalar_eltype(ts)
-    createTimeSpanSample(ts, Int.(n), Tv.(w))
+    createTimeSpanSample(ts, Int.(n), Tv.(w), _totau(Tv, tau, length(t)))
+end
+
+_totau(::Type{Tv}, ::Nothing, m::Int) where Tv = zeros(Tv, m)
+
+function _totau(::Type{Tv}, tau::AbstractVector, m::Int) where Tv
+    length(tau) == m || throw(ArgumentError("tau must have the same length as t ($(length(tau)) != $m)"))
+    Tv.(tau)
 end
 
 function TimeSpanSample(data::WeightedSample{Tv}) where Tv
@@ -85,11 +93,19 @@ function TimeSpanSample(data::GroupTruncSample)
     createTimeSpanSample(ts, ns, w)
 end
 
-function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int}, v::Vector{Tv}) where Tv
+_lowertime(ti) = ti isa Tuple ? ti[1] : ti
+
+function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int}, v::Vector{Tv},
+                              tau::Vector{Tv} = zeros(Tv, length(t))) where Tv
     expanded_values = Tv[]
     n_values = Int[]
     v_values = Tv[]
-    index_values = Int[]
+    # Kind of each expanded entry. The two entries of a finite interval are pushed
+    # consecutively as :span and are the only ones that get paired below; every other
+    # kind is self-contained. Using an explicit kind instead of overloading the raw
+    # observation index keeps two adjacent observations of the same kind (e.g. two
+    # right-censored, or two [0,b] intervals) from being mistaken for one interval.
+    kinds = Symbol[]
     for (i, ti) in enumerate(t)
         if n[i] == 0
             continue
@@ -98,19 +114,19 @@ function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int
             push!(expanded_values, ti)
             push!(n_values, n[i])
             push!(v_values, v[i])
-            push!(index_values, i)
+            push!(kinds, :exact)
         elseif ti isa Tuple{Tv, Tv}
             a, b = ti
             if isinf(b)
                 push!(expanded_values, a)
                 push!(n_values, n[i])
                 push!(v_values, v[i])
-                push!(index_values, -1)
+                push!(kinds, :censored)
             elseif a == 0
                 push!(expanded_values, b)
                 push!(n_values, n[i])
                 push!(v_values, v[i])
-                push!(index_values, 0)
+                push!(kinds, :fromzero)
             else
                 push!(expanded_values, a)
                 push!(expanded_values, b)
@@ -118,21 +134,28 @@ function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int
                 push!(n_values, n[i])
                 push!(v_values, v[i])
                 push!(v_values, v[i])
-                push!(index_values, i)
-                push!(index_values, i)
+                push!(kinds, :span)
+                push!(kinds, :span)
             end
         else
             error("Unsupported time sample type")
         end
     end
 
-    m = length(expanded_values)
-    ord = collect(1:m)
-    for i in 1:m
-        if index_values[i] == -1
-            index_values[i] = m + 1
-        end
+    # Left truncation times are appended after every ordinary observation so that
+    # they never sit between the two entries of an interval.
+    for (i, taui) in enumerate(tau)
+        (n[i] == 0 || taui <= 0) && continue
+        lo = _lowertime(t[i])
+        taui <= lo || throw(ArgumentError(
+            "left truncation time tau[$i]=$taui must not exceed the observation time $lo"))
+        push!(expanded_values, taui)
+        push!(n_values, n[i])
+        push!(v_values, v[i])
+        push!(kinds, :trunc)
     end
+
+    m = length(expanded_values)
     ord = sortperm(expanded_values)
     inv_ord = zeros(Int, m)
     for (j, idx) in enumerate(ord)
@@ -140,20 +163,26 @@ function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int
     end
 
     z = zeros(Int, m)
-    prev_index = -2
+    pending_span = 0  # index of an unpaired :span lower bound, 0 if none
     for i in 1:m
-        idx = index_values[i]
-        if idx == prev_index
-            z[i-1] = inv_ord[i]
-            z[i] = inv_ord[i-1]
-        elseif idx == 0
+        k = kinds[i]
+        if k == :span
+            if pending_span != 0
+                z[pending_span] = inv_ord[i]
+                z[i] = inv_ord[pending_span]
+                pending_span = 0
+            else
+                pending_span = i
+            end
+        elseif k == :fromzero
             z[i] = 0
-        elseif idx == m + 1
+        elseif k == :censored
             z[i] = m + 1
-        else
+        elseif k == :trunc
+            z[i] = -1
+        else # :exact
             z[i] = inv_ord[i]
         end
-        prev_index = idx
     end
 
     reordered_values = [expanded_values[j] for j in ord]
@@ -174,7 +203,8 @@ function createTimeSpanSample(t::Vector{<:Union{Tv,Tuple{Tv,Tv}}}, n::Vector{Int
         reordered_z,
         t,
         n,
-        v
+        v,
+        tau
     )
 end
 
@@ -182,12 +212,14 @@ function mean(data::TimeSpanSample{Tv}) where Tv
     if data.length == 0
         return Tv(0)
     end
-    total_weight = sum(data.ndat[i] * data.wdat[i] for i in 1:data.length)
+    # Left truncation entries are not observations; they must not enter the mean.
+    obs = [i for i in 1:data.length if data.zdat[i] != -1]
+    total_weight = sum(data.ndat[i] * data.wdat[i] for i in obs; init=Tv(0))
     if total_weight == 0
         return Tv(0)
     end
     ctime = cumsum(data.tdat)
-    weighted_sum = sum(ctime[i] * data.ndat[i] * data.wdat[i] for i in 1:data.length)
+    weighted_sum = sum(ctime[i] * data.ndat[i] * data.wdat[i] for i in obs; init=Tv(0))
     return weighted_sum / total_weight
 end
 
@@ -268,7 +300,26 @@ end
             vb[k] .= vb[k-1]
         end
 
-        if data.zdat[k] == k # observed time
+        if data.zdat[k] == -1 # left truncation at tdat[k]
+            # The contribution of -log S(t_k) is the unconditional expectation minus
+            # the expectation of a right-censored observation at t_k, both scaled by
+            # wb = nw / S(t_k). This gives exactly the same vector structure as the
+            # interval [0, t] branch below, with F(t) replaced by S(t) in wb.
+            nw = data.ndat[k] * data.wdat[k]
+            tmp = @dot(alpha, barvb[k])
+            llf -= nw * log(tmp)
+            wb[k] = nw / tmp
+            nn += wb[k] - nw
+
+            @. tmpv = one
+            axpy!(-1.0, barvb[k], tmpv)
+            axpy!(wb[k], tmpv, eres.eb)
+            spger!(wb[k], baralpha, tmpv, 1.0, eres.en)
+
+            @. tmpv = baralpha
+            axpy!(-1.0, barvf[k], tmpv)
+            axpy!(wb[k], tmpv, eres.ey)
+        elseif data.zdat[k] == k # observed time
             nw = data.ndat[k] * data.wdat[k]
             nn += nw
             tmp = @dot(alpha, vb[k])
@@ -345,6 +396,8 @@ end
             vc[k] .= vc[k+1]
         end
         if data.zdat[k] < k
+            # Covers both the upper end of an interval and left truncation (zdat == -1),
+            # which contribute -baralpha to the forward source either way.
             axpy!(-wb[k], baralpha, vc[k])
         elseif data.zdat[k] > k
             axpy!(wb[k], baralpha, vc[k])
@@ -397,7 +450,7 @@ end
 function bootstrap(rng::AbstractRNG, data::TimeSpanSample{Tv}) where Tv
     N = sum(data.rawn)
     n_new = rand(rng, Multinomial(N, data.rawn ./ N))
-    TimeSpanSample(data.rawt, n_new, data.raww)
+    TimeSpanSample(data.rawt, n_new, data.raww; tau=data.rawtau)
 end
 
 bootstrap(data::TimeSpanSample) = bootstrap(Random.default_rng(), data)
@@ -410,7 +463,7 @@ function eic(rng::AbstractRNG, ph0::CF1{Tv}, data::TimeSpanSample{Tv};
     reltol::Tv = Tv(1.0e-5)
 ) where Tv
     llf0 = phllf(ph0, data)
-    d0 = TimeSpanSample(data.rawt, data.rawn, data.raww)
+    d0 = TimeSpanSample(data.rawt, data.rawn, data.raww; tau=data.rawtau)
     d1 = [bootstrap(rng, data) for _ in 1:bsample]
     bias = Vector{Union{Tv,Nothing}}(undef, bsample)
     Threads.@threads for i in 1:bsample
