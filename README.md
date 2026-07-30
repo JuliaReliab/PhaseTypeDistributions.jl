@@ -6,6 +6,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Julia](https://img.shields.io/badge/Julia-1.10+-blue.svg)](https://julialang.org)
 
+> ## ⚠️ This package has moved to [`PhaseTypeInference.jl`](https://github.com/JuliaReliab/PhaseTypeInference.jl)
+>
+> An unrelated package of the same name is registered in General
+> ([Julia-Matrix-Analytic-Probability/PhaseTypeDistributions.jl](https://github.com/Julia-Matrix-Analytic-Probability/PhaseTypeDistributions.jl),
+> UUID `c6a3dbec-…`), which made installation by name ambiguous. Development
+> continues under the new name, with this repository's full git history and
+> version line. The API is unchanged apart from the module name — replace
+> `using PhaseTypeDistributions` with `using PhaseTypeInference`.
+>
+> ```julia
+> using Pkg
+> Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))
+> Pkg.add("PhaseTypeInference")
+> ```
+>
+> **This repository stays available, frozen at v0.8.0**, so that published
+> results citing it keep resolving. New work goes to `PhaseTypeInference.jl`.
 
 A Julia package for working with **Phase-Type (PH) distributions**, providing tools for creating, analyzing, and fitting these versatile probability distributions. Phase-type distributions are fundamental in stochastic modeling, queueing theory, reliability engineering, and survival analysis.
 
