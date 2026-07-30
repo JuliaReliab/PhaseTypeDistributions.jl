@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.8.0]
+
+### Breaking changes
+- Dependencies are now resolved from the **JuliaReliab registry** instead of git `master`. The `[sources]` section has been removed from `Project.toml`; add the registry once with `Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))`.
+- Minimum dependency versions: `NMarkov = "0.5"`, `DEQuadrature = "0.3"`.
+- Minimum Julia version raised from 1.6 to **1.10**, as required by NMarkov 0.5.
+
+### Bug fixes
+- Adapted to NMarkov 0.5, whose sparse types (`SparseCSR`/`SparseCSC`/`SparseCOO`) now obey the `AbstractMatrix` contract: `length(A)` is `m*n` and a linear index is cartesian, where previously `length(A)` was `nnz(A)` and `A[i]` was `A.val[i]`. The old-style loops in `clear!`, in the `en .*= T` tail of every `estep!`, and in the `SparseCSR`/`SparseCSC`/`SparseCOO` `mstep!`s now go through a `nzvalues(A)` helper that returns the stored-entry vector. Without this, fitting with those matrix types raised `ArgumentError: cannot write the element (i,j)`. As a side effect, the default `SparseMatrixCSC` path no longer walks all `m*n` positions in these loops.
+
+### New features
+- `WeightedSample(f, bounds; …)` accepts a `dropzero` keyword (default `eps(Tv)`). DEQuadrature 0.3 moved the quadrature-node drop threshold out of `abstol` into this separate option, whose own default is 0; leaving it at 0 for a density on `[0, Inf)` keeps far-tail nodes and inflates `maxtime` to ~1e13, which makes `estep!` request an unusable Poisson p.m.f. buffer. The default here reproduces the pre-0.3 node set exactly.
+
 ## [0.7.0]
 
 ### New features

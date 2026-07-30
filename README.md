@@ -4,7 +4,7 @@
 [![codecov](https://codecov.io/gh/JuliaReliab/PhaseTypeDistributions.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/JuliaReliab/PhaseTypeDistributions.jl)
 [![Coverage Status](https://coveralls.io/repos/github/JuliaReliab/PhaseTypeDistributions.jl/badge.svg?branch=master)](https://coveralls.io/github/JuliaReliab/PhaseTypeDistributions.jl?branch=master)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Julia](https://img.shields.io/badge/Julia-1.9+-blue.svg)](https://julialang.org)
+[![Julia](https://img.shields.io/badge/Julia-1.10+-blue.svg)](https://julialang.org)
 
 
 A Julia package for working with **Phase-Type (PH) distributions**, providing tools for creating, analyzing, and fitting these versatile probability distributions. Phase-type distributions are fundamental in stochastic modeling, queueing theory, reliability engineering, and survival analysis.
@@ -36,15 +36,23 @@ Phase-type distributions represent the time until absorption in a continuous-tim
 
 ## Installation
 
+This package depends on `NMarkov.jl` and `DEQuadrature.jl`, which live in the
+JuliaReliab registry rather than General. Add that registry first — once per Julia
+depot — and the dependencies resolve automatically:
+
 ```julia
 using Pkg
+Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))
 Pkg.add(url="https://github.com/JuliaReliab/PhaseTypeDistributions.jl")
 ```
 
 Or in the Julia REPL package mode (press `]`):
 ```julia
+pkg> registry add https://github.com/JuliaReliab/Registry.git
 pkg> add https://github.com/JuliaReliab/PhaseTypeDistributions.jl
 ```
+
+Requires Julia 1.10 or later.
 
 ## Quick Start
 

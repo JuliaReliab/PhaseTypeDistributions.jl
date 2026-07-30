@@ -4,16 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Install unregistered dependencies (required before first use):**
+**Add the JuliaReliab registry (required once per depot):**
+
+`NMarkov` and `DEQuadrature` live in the JuliaReliab registry, not General. Add it
+and ordinary `Pkg.instantiate()` resolves them from released versions.
+
 ```julia
-julia --project=. -e '
+julia -e '
   using Pkg
-  Pkg.add([
-    PackageSpec(url="https://github.com/JuliaReliab/DEQuadrature.jl.git"),
-    PackageSpec(url="https://github.com/JuliaReliab/NMarkov.jl.git")
-  ])
+  Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))
 '
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
+
+Do **not** re-add these as git URLs — that writes a `[sources]` section into
+`Project.toml` which pins them to `master` and silently bypasses `[compat]`.
 
 **Run all tests:**
 ```
@@ -105,11 +110,30 @@ by exact numerical agreement with `LeftTruncRightCensoredSample`.
 
 ### Key external dependencies
 
-- `NMarkov.jl` (unregistered) — sparse matrix formats and Markov chain utilities used throughout
-- `DEQuadrature.jl` (unregistered) — double-exponential quadrature for numerical integration in fitting
+- `NMarkov.jl` (JuliaReliab registry, `0.5`) — sparse matrix formats and Markov chain utilities used throughout
+- `DEQuadrature.jl` (JuliaReliab registry, `0.3`) — double-exponential quadrature for numerical integration in fitting
 - `Distributions.jl` — abstract type hierarchy that `GPH`/`CF1` extend
 
+Two things about these two to keep in mind when touching fitting code:
+
+- **`NMarkov`'s sparse types obey the `AbstractMatrix` contract.** For `SparseCSR`,
+  `SparseCSC` and `SparseCOO`, `length(A)` is `m*n` and a linear index is cartesian.
+  To walk the stored entries use `nnz(A)` and `A.val`, or the `nzvalues(A)` helper in
+  `phfit_common.jl`, which also covers `SparseMatrixCSC` (`.nzval`) and dense `Matrix`.
+  Writing to a position outside the sparsity pattern throws. (Before NMarkov 0.5,
+  `length` was `nnz` and `A[i]` was `A.val[i]`, so old-style loops compiled but were wrong.)
+- **`DEQuadrature`'s node-drop threshold is `dropzero`, not `abstol`.** `abstol` only
+  controls convergence. `dropzero` must stay above zero for density fitting — see the
+  docstring on `WeightedSample(f, bounds)` in `phfit_density.jl`.
+
 ## Session log
+
+### 2026-07-30
+
+**Done:**
+- Migrated to DEQuadrature 0.3.0 / NMarkov 0.5.1 from the JuliaReliab registry; removed the `[sources]` git-master pins, `julia` compat 1.6 → 1.10, v0.8.0
+- Two real incompatibilities fixed (both described under Key external dependencies): the `dropzero` split in `deint`, and the `AbstractMatrix`-contract change in NMarkov's sparse types which broke `clear!`, the `en .*= T` tails of every `estep!`, and the CSR/CSC/COO `mstep!`s
+- Verified: deterministic density-fit llf agrees with the pre-migration value to 15 digits and the quadrature node set is bit-identical; the other llf values printed by the test suite vary run to run because only `test_phfit_timespan.jl` seeds the RNG
 
 ### 2026-07-29
 

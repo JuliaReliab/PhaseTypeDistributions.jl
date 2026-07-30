@@ -1,7 +1,22 @@
 using PhaseTypeDistributions: GPH, CF1, cf1sort!
-using NMarkov.SparseMatrix: SparseCSR, SparseCSC, SparseCOO
+using NMarkov.SparseMatrix: SparseCSR, SparseCSC, SparseCOO, AbstractSparseM
 using SparseArrays: SparseMatrixCSC, nnz, sparse
 using ProgressMeter
+
+"""
+    nzvalues(A)
+
+The vector of stored entries of `A`, in storage order.
+
+Element-wise work over the stored entries must go through this rather than
+`A[i]`: NMarkov's sparse types honour the `AbstractMatrix` contract, so `length`
+is `m*n` and a linear index is cartesian, not an index into the stored values.
+`eres.en` is built with `similar(ph.T)`, so the two share a pattern and their
+`nzvalues` line up entry for entry.
+"""
+nzvalues(A::Matrix) = A
+nzvalues(A::SparseMatrixCSC) = A.nzval
+nzvalues(A::AbstractSparseM) = A.val
 
 function initializePH(cf1::CF1{Tv}, data::AbstractPHSample, ::Type{MatT}=SparseMatrixCSC;
     ratio = Tv[1, 4, 16, 64, 256, 1024],
@@ -141,9 +156,8 @@ function clear!(eres::Estep{Tv,MatT}) where {Tv,MatT}
     @. eres.eb = zero(Tv)
     @. eres.ey = zero(Tv)
     @. eres.ez = zero(Tv)
-    for i = 1:length(eres.en)
-        eres.en[i] = zero(Tv)
-    end
+    envals = nzvalues(eres.en)
+    @. envals = zero(Tv)
 end
 
 function estep!(ph::CF1{Tv}, data::AbstractPHSample, eres::Estep{Tv,MatT};
@@ -176,12 +190,13 @@ function mstep!(ph::GPH{Tv,SparseCSR{Tv,Ti}}, eres::Estep{Tv,SparseCSR{Tv,Ti}}) 
     dim = ph.dim
     tmp = zeros(Tv, dim)
     d = zeros(Ti, dim)
+    Tval, enval = ph.T.val, eres.en.val
     for i = 1:dim
         for z = eres.en.rowptr[i]:eres.en.rowptr[i+1]-1
             j = eres.en.colind[z]
             if i != j
-                ph.T[z] = eres.en[z] / eres.ez[i]
-                tmp[i] += ph.T[z]
+                Tval[z] = enval[z] / eres.ez[i]
+                tmp[i] += Tval[z]
             else
                 d[i] = z
             end
@@ -201,12 +216,13 @@ function mstep!(ph::GPH{Tv,SparseCSC{Tv,Ti}}, eres::Estep{Tv,SparseCSC{Tv,Ti}}) 
     dim = ph.dim
     tmp = zeros(Tv, dim)
     d = zeros(Ti, dim)
+    Tval, enval = ph.T.val, eres.en.val
     for j = 1:dim
         for z = eres.en.colptr[j]:eres.en.colptr[j+1]-1
             i = eres.en.rowind[z]
             if i != j
-                ph.T[z] = eres.en[z] / eres.ez[i]
-                tmp[i] += ph.T[z]
+                Tval[z] = enval[z] / eres.ez[i]
+                tmp[i] += Tval[z]
             else
                 d[i] = z
             end
@@ -251,12 +267,13 @@ function mstep!(ph::GPH{Tv,SparseCOO{Tv,Ti}}, eres::Estep{Tv,SparseCOO{Tv,Ti}}) 
     dim = ph.dim
     tmp = zeros(Tv, dim)
     d = zeros(Ti, dim)
+    Tval, enval = ph.T.val, eres.en.val
     for z = 1:nnz(eres.en)
         i = eres.en.rowind[z]
         j = eres.en.colind[z]
         if i != j
-            ph.T[z] = eres.en[z] / eres.ez[i]
-            tmp[i] += ph.T[z]
+            Tval[z] = enval[z] / eres.ez[i]
+            tmp[i] += Tval[z]
         else
             d[i] = z
         end

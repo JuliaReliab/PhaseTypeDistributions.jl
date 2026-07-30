@@ -434,9 +434,8 @@ end
     @. eres.eb *= alpha
     @. eres.ey *= tau
     eres.ez = spdiag(eres.en)
-    for i = 1:length(eres.en)
-        eres.en[i] *= ph.T[i]
-    end
+    envals, Tvals = nzvalues(eres.en), nzvalues(ph.T)
+    @. envals *= Tvals
 
     llf
 end
