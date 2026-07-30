@@ -17,7 +17,12 @@ ZeroOrigin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
 
 [compat]
 DEQuadrature = "0.3"
+Distributions = "0.25"
 NMarkov = "0.5"
+PolynomialRoots = "1"
+ProgressMeter = "1"
+SpecialFunctions = "2"
+ZeroOrigin = "0.2"
 julia = "1.10"
 
 [extras]
