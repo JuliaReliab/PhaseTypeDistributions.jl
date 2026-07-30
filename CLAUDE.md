@@ -4,16 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-**Install unregistered dependencies (required before first use):**
+**Add the JuliaReliab registry (required once per depot):**
+
+`NMarkov` and `DEQuadrature` live in the JuliaReliab registry, not General. Add it
+and ordinary `Pkg.instantiate()` resolves them from released versions.
+
 ```julia
-julia --project=. -e '
+julia -e '
   using Pkg
-  Pkg.add([
-    PackageSpec(url="https://github.com/JuliaReliab/DEQuadrature.jl.git"),
-    PackageSpec(url="https://github.com/JuliaReliab/NMarkov.jl.git")
-  ])
+  Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))
 '
+julia --project=. -e 'using Pkg; Pkg.instantiate()'
 ```
+
+Do **not** re-add these as git URLs — that writes a `[sources]` section into
+`Project.toml` which pins them to `master` and silently bypasses `[compat]`.
 
 **Run all tests:**
 ```
@@ -66,12 +71,83 @@ The `Phfit` submodule fits PH parameters to data via the **EM algorithm**:
 Data is passed to `phfit` as typed sample objects:
 - `WeightedSample` — density/point observations with weights
 - `PointSample` — i.i.d. point observations
-- `TimeSpanSample` — mixed exact/interval observations; holds separate `ndat` (frequency, bootstrap target) and `wdat` (analytic weight, fixed), plus `rawt`/`rawn`/`raww` for bootstrap reconstruction
+- `TimeSpanSample` — mixed exact/interval observations; holds separate `ndat` (frequency, bootstrap target) and `wdat` (analytic weight, fixed), plus `rawt`/`rawn`/`raww` for bootstrap reconstruction. Constructors also accept `WeightedSample` or `GroupTruncSample` directly for conversion.
 - `LeftTruncRightCensoredSample` — survival analysis (left truncation, right censoring)
 - `GroupTruncSample`, `GroupTruncPoiSample` — grouped/histogram data
 
+### `TimeSpanSample` constructors (`src/phfit/phfit_timespan.jl`)
+
+All accept a `tau` keyword argument for left truncation (`tau[i] > 0` = truncation time of observation `i`, `tau[i] == 0` = none; stored in `rawtau`).
+
+- `TimeSpanSample(t; tau)` — point observations
+- `TimeSpanSample(t, n; tau)` — with integer counts
+- `TimeSpanSample(t, n, w; tau)` — with counts and analytic weights; `t[i]` can be scalar (exact) or `Tuple{Tv,Tv}` (interval)
+- `TimeSpanSample(data::WeightedSample)` — converts quadrature points; each point gets `ndat=1`, `wdat=wdat`
+- `TimeSpanSample(data::GroupTruncSample)` — converts grouped data; interval obs → tuple entries, exact obs → scalar entries, last interval → `(t_m, Inf)`
+
+### `zdat` encoding in `TimeSpanSample`
+
+Internal field used by the E-step to identify observation type at each sorted time point:
+- `-1` — left truncation at `t_k`
+- `0` — interval `[0, t_k]`
+- `k` — exact observation at `t_k`
+- `j` (0 < j < k) — interval `[t_j, t_k]`, lower bound at index j
+- `m+1` — right-censored `[t_k, ∞)`
+
+`createTimeSpanSample` pairs the two endpoints of a finite interval by an explicit entry
+kind (`:span`), not by a reused sentinel index — reusing the index silently merged two
+adjacent same-kind observations into one interval (fixed in v0.7.0).
+
+### Left truncation in the `TimeSpanSample` E-step
+
+The contribution of `-log S(τ)` equals `wb * [unconditional expectation] - [right-censored-at-τ expectation]`
+with `wb = n_i w_i / S(τ)`. In the `timespan` decomposition this collapses to exactly the
+same vector structure as the `zdat == 0` (interval `[0,t]`) branch — `eb += wb*(1 - barvb)`,
+`ey += wb*(ᾱ - barvf)`, `en += wb*outer(ᾱ, 1 - barvb)` — differing only in that `wb` divides
+by `S(τ)` instead of `F(τ)`, and `llf` is subtracted. The `vc` backward recursion needs no
+new branch: `zdat[k] < k` already contributes `-wb*ᾱ`, which is correct for `-1`. Verified
+by exact numerical agreement with `LeftTruncRightCensoredSample`.
+
 ### Key external dependencies
 
-- `NMarkov.jl` (unregistered) — sparse matrix formats and Markov chain utilities used throughout
-- `DEQuadrature.jl` (unregistered) — double-exponential quadrature for numerical integration in fitting
+- `NMarkov.jl` (JuliaReliab registry, `0.5`) — sparse matrix formats and Markov chain utilities used throughout
+- `DEQuadrature.jl` (JuliaReliab registry, `0.3`) — double-exponential quadrature for numerical integration in fitting
 - `Distributions.jl` — abstract type hierarchy that `GPH`/`CF1` extend
+
+Two things about these two to keep in mind when touching fitting code:
+
+- **`NMarkov`'s sparse types obey the `AbstractMatrix` contract.** For `SparseCSR`,
+  `SparseCSC` and `SparseCOO`, `length(A)` is `m*n` and a linear index is cartesian.
+  To walk the stored entries use `nnz(A)` and `A.val`, or the `nzvalues(A)` helper in
+  `phfit_common.jl`, which also covers `SparseMatrixCSC` (`.nzval`) and dense `Matrix`.
+  Writing to a position outside the sparsity pattern throws. (Before NMarkov 0.5,
+  `length` was `nnz` and `A[i]` was `A.val[i]`, so old-style loops compiled but were wrong.)
+- **`DEQuadrature`'s node-drop threshold is `dropzero`, not `abstol`.** `abstol` only
+  controls convergence. `dropzero` must stay above zero for density fitting — see the
+  docstring on `WeightedSample(f, bounds)` in `phfit_density.jl`.
+
+## Session log
+
+### 2026-07-30
+
+**Done:**
+- Migrated to DEQuadrature 0.3.0 / NMarkov 0.5.1 from the JuliaReliab registry; removed the `[sources]` git-master pins, `julia` compat 1.6 → 1.10, v0.8.0
+- Two real incompatibilities fixed (both described under Key external dependencies): the `dropzero` split in `deint`, and the `AbstractMatrix`-contract change in NMarkov's sparse types which broke `clear!`, the `en .*= T` tails of every `estep!`, and the CSR/CSC/COO `mstep!`s
+- Verified: deterministic density-fit llf agrees with the pre-migration value to 15 digits and the quadrature node set is bit-identical; the other llf values printed by the test suite vary run to run because only `test_phfit_timespan.jl` seeds the RNG
+
+### 2026-07-29
+
+**Done:**
+- Left truncation support for `TimeSpanSample` (`tau` keyword on all constructors, `rawtau` field, `zdat == -1`, new E-step branch, `mean`/`bootstrap`/`eic` updated). The E-step math that had blocked the previous session is resolved and documented above; agreement with `LeftTruncRightCensoredSample` is exact.
+- Fixed a pre-existing bug where two adjacent same-kind observations were merged into one interval (see the `createTimeSpanSample` note above)
+- Bumped to v0.7.0
+
+### 2026-04-23 / 2026-04-24
+
+**Done:**
+- Added `TimeSpanSample(data::WeightedSample)` constructor — converts quadrature sample to TimeSpanSample (each point: ndat=1, wdat=wdat)
+- Added `TimeSpanSample(data::GroupTruncSample)` constructor — converts group data; skips unobserved intervals (gdat==-1)
+- Bumped version to 0.6.3, updated CHANGELOG.md, committed and pushed (e5beff1)
+
+**Pending:**
+- Left truncation for `TimeSpanSample` — **completed 2026-07-29**, see the entry above.

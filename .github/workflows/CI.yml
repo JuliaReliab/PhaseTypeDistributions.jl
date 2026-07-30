@@ -19,9 +19,8 @@ jobs:
       fail-fast: false
       matrix:
         version:
-          - '1.6'  # Minimum Julia version
-          - '1.9'  # Version with [sources] support
-          - '1'    # Latest stable Julia
+          - '1.10'  # Minimum Julia version
+          - '1'     # Latest stable Julia
         os:
           - ubuntu-latest
           - macOS-latest
@@ -37,16 +36,16 @@ jobs:
       
       - uses: julia-actions/cache@v2
       
-      - name: Install unregistered dependencies
+      # NMarkov and DEQuadrature live here rather than in General. Adding the
+      # registry — not the git URLs — keeps resolution on released versions and
+      # keeps [compat] in force.
+      - name: Add the JuliaReliab registry
         run: |
-          julia --project=. -e '
+          julia -e '
             using Pkg
-            Pkg.add([
-              PackageSpec(url="https://github.com/JuliaReliab/DEQuadrature.jl.git"),
-              PackageSpec(url="https://github.com/JuliaReliab/NMarkov.jl.git")
-            ])
+            Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))
           '
-      
+
       - uses: julia-actions/julia-buildpkg@v1
       
       - uses: julia-actions/julia-runtest@v1
@@ -78,6 +77,13 @@ jobs:
       
       - uses: julia-actions/cache@v2
       
+      - name: Add the JuliaReliab registry
+        run: |
+          julia -e '
+            using Pkg
+            Pkg.Registry.add(RegistrySpec(url="https://github.com/JuliaReliab/Registry.git"))
+          '
+
       - name: Install dependencies
         run: julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
         if: hashFiles('docs/Project.toml') != ''

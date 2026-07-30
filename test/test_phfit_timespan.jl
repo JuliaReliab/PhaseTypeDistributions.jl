@@ -212,3 +212,121 @@ end
 
     @test r.nvalid == 20
 end
+
+# ---------------------------------------------------------------------------
+# Left truncation
+# ---------------------------------------------------------------------------
+
+@testset "TimeSpanSample left truncation — construction" begin
+    tau = [0.0, 0.5, 0.0, 1.2]
+    t   = tau .+ [0.3, 0.4, 0.7, 0.2]
+    dat = TimeSpanSample(t; tau=tau)
+
+    # two truncation entries were appended on top of the four observations
+    @test dat.length == 6
+    @test count(==(-1), dat.zdat) == 2
+    @test dat.rawtau == tau
+
+    # tau omitted => no truncation entries, backward compatible
+    dat0 = TimeSpanSample(t)
+    @test dat0.length == 4
+    @test !any(==(-1), dat0.zdat)
+    @test all(iszero, dat0.rawtau)
+
+    @test_throws ArgumentError TimeSpanSample(t; tau=[0.0, 0.5])
+    @test_throws ArgumentError TimeSpanSample([1.0]; tau=[2.0])  # tau after the event
+end
+
+@testset "TimeSpanSample left truncation — estep! matches LeftTruncRightCensoredSample" begin
+    Random.seed!(1234)
+    cf1 = CF1([0.1, 0.3, 0.6], [1.4, 0.4, 2.0])
+    ph  = GPH(cf1, SparseMatrixCSC)
+
+    tau   = [0.0, 0.5, 0.0, 1.2, 0.3]
+    t     = tau .+ rand(5)
+    delta = [true, true, false, true, false]  # true = exact, false = right censored
+
+    d_lr = LeftTruncRightCensoredSample(t, tau, delta)
+    d_ts = TimeSpanSample([delta[i] ? t[i] : (t[i], Inf) for i in eachindex(t)]; tau=tau)
+
+    e1 = Estep(ph); e2 = Estep(ph)
+    llf1 = estep!(cf1, d_lr, e1)
+    llf2 = estep!(cf1, d_ts, e2)
+
+    @test llf1 ≈ llf2
+    @test e1.etotal ≈ e2.etotal
+    @test e1.eb ≈ e2.eb
+    @test e1.ey ≈ e2.ey
+    @test e1.ez ≈ e2.ez
+    @test Matrix(e1.en) ≈ Matrix(e2.en)
+end
+
+@testset "TimeSpanSample left truncation — phfit matches LeftTruncRightCensoredSample" begin
+    Random.seed!(2024)
+    n     = 60
+    tau   = [isodd(i) ? 0.0 : 0.2 * rand() for i in 1:n]
+    t     = tau .+ rand(n)
+    delta = rand(Bool, n)
+
+    d_lr = LeftTruncRightCensoredSample(t, tau, delta)
+    d_ts = TimeSpanSample([delta[i] ? t[i] : (t[i], Inf) for i in eachindex(t)]; tau=tau)
+
+    r_lr = phfit!(CF1([0.2, 0.3, 0.5], [1.0, 2.0, 3.0]), d_lr; progress=false)
+    r_ts = phfit!(CF1([0.2, 0.3, 0.5], [1.0, 2.0, 3.0]), d_ts; progress=false)
+
+    @test r_lr[1] ≈ r_ts[1]   # llf
+end
+
+@testset "TimeSpanSample left truncation — llf against the closed form" begin
+    cf1 = CF1([0.2, 0.3, 0.5], [1.5, 0.7, 2.5])
+
+    # exact, interval, right-censored and [0,b] observations, all left truncated
+    tt  = [1.1, (0.6, 1.4), (0.9, Inf), (0.0, 1.7)]
+    tau = [0.4, 0.3, 0.5, 0.0]
+    dat = TimeSpanSample(tt, [1, 1, 1, 1]; tau=tau)
+
+    S(x) = ccdf(cf1, x)
+    expected = log(pdf(cf1, 1.1))    - log(S(0.4)) +
+               log(S(0.6) - S(1.4))  - log(S(0.3)) +
+               log(S(0.9))           - log(S(0.5)) +
+               log(S(0.0) - S(1.7))
+
+    @test phllf(cf1, dat) ≈ expected
+end
+
+@testset "TimeSpanSample left truncation — bootstrap and eic" begin
+    rng = MersenneTwister(9)
+    n   = 80
+    tau = [isodd(i) ? 0.0 : 0.15 * rand(rng) for i in 1:n]
+    t   = tau .+ rand(rng, n)
+    dat = TimeSpanSample(t; tau=tau)
+
+    b = bootstrap(MersenneTwister(3), dat)
+    @test b.rawtau == dat.rawtau
+    @test sum(b.rawn) == sum(dat.rawn)
+
+    res = phfit(CF1(3), dat; progress_init=false, progress=false)
+    r   = eic(MersenneTwister(11), res.model, dat; bsample=10)
+    @test r.nvalid == 10
+    @test isfinite(r.eic)
+    @test r.ci_lower <= r.eic <= r.ci_upper
+end
+
+@testset "TimeSpanSample adjacent same-kind observations are not paired" begin
+    # Regression: two consecutive right-censored observations used to be mistaken
+    # for the single interval [0.5, 0.8], and likewise for two [0, b] intervals.
+    d = TimeSpanSample([(0.5, Inf), (0.8, Inf), 1.2])
+    @test d.zdat == [4, 4, 3]        # m+1, m+1, exact
+
+    d = TimeSpanSample([(0.0, 1.0), (0.0, 2.0)])
+    @test d.zdat == [0, 0]
+
+    # A real interval is still paired.
+    d = TimeSpanSample([(0.5, 0.8)])
+    @test d.zdat == [2, 1]
+
+    # And the likelihood matches the closed form for adjacent censored observations.
+    cf1 = CF1([0.3, 0.7], [1.0, 2.5])
+    dat = TimeSpanSample([(0.5, Inf), (0.8, Inf), 1.2])
+    @test phllf(cf1, dat) ≈ log(ccdf(cf1, 0.5)) + log(ccdf(cf1, 0.8)) + log(pdf(cf1, 1.2))
+end

@@ -35,8 +35,22 @@ function PointSample(t::Vector{Tv}) where Tv
     WeightedSample(length(dt), maxt, dt, ones(length(dt)))
 end
 
-function WeightedSample(f::Any, bounds::Tuple{Tv,Tv}; reltol::Tv = 1.0e-8, abstol::Tv = eps(Tv), d = 8, maxiter = 16) where Tv
-    de = deint(f, bounds[1], bounds[2], reltol=reltol, abstol=abstol, d=d, maxiter=maxiter)
+"""
+    WeightedSample(f, bounds; reltol, abstol, dropzero, d, maxiter)
+
+Build a quadrature sample for the density `f` over `bounds` using the double
+exponential formula.
+
+`dropzero` discards quadrature nodes whose weight magnitude does not exceed it.
+It must stay above zero here: the DE mapping of `[0, Inf)` places nodes out to
+~1e13, and keeping the ones whose weight has decayed into the far tail would
+inflate `maxtime`, which `estep!` feeds to `rightbound` to size the Poisson
+p.m.f. buffer — an unusable amount of memory for no gain in accuracy.
+"""
+function WeightedSample(f::Any, bounds::Tuple{Tv,Tv}; reltol::Tv = 1.0e-8,
+    abstol::Tv = eps(Tv), dropzero::Tv = eps(Tv), d = 8, maxiter = 16) where Tv
+    de = deint(f, bounds[1], bounds[2], reltol=reltol, abstol=abstol,
+               dropzero=dropzero, d=d, maxiter=maxiter)
     WeightedSample(de.x, de.w * de.h)
 end
 
@@ -162,9 +176,8 @@ end
     @. eres.eb *= alpha
     @. eres.ey *= tau
     eres.ez = spdiag(eres.en)
-    for i = 1:length(eres.en)
-        eres.en[i] *= ph.T[i]
-    end
+    envals, Tvals = nzvalues(eres.en), nzvalues(ph.T)
+    @. envals *= Tvals
     eres.etotal = sum(eres.eb)
 
     return llf

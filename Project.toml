@@ -1,6 +1,6 @@
 name = "PhaseTypeDistributions"
 uuid = "6af5a0ae-9b1e-11ea-302b-a1bb748cae78"
-version = "0.6.3"
+version = "0.8.0"
 authors = ["Hiroyuki Okamura"]
 
 [deps]
@@ -15,13 +15,15 @@ SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
 ZeroOrigin = "421443cc-9b00-11ea-1646-3bac74f84b0c"
 
-[sources]
-DEQuadrature = {rev = "master", url = "https://github.com/JuliaReliab/DEQuadrature.jl.git"}
-NMarkov = {rev = "master", url = "https://github.com/JuliaReliab/NMarkov.jl.git"}
-
 [compat]
-NMarkov = "0.4.0"
-julia = "1.6"
+DEQuadrature = "0.3"
+Distributions = "0.25"
+NMarkov = "0.5"
+PolynomialRoots = "1"
+ProgressMeter = "1"
+SpecialFunctions = "2"
+ZeroOrigin = "0.2"
+julia = "1.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
